@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Set
 
 from telegram import Update
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
@@ -15,6 +16,7 @@ from bot.shared.backend_client import (
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+ALLOWED_USER_IDS: Set[int] = {5241294807}
 
 def _get_backend_client(context: ContextTypes.DEFAULT_TYPE) -> IdeaBackendClient:
     backend_client = context.application.bot_data.get("backend_client")
@@ -30,6 +32,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     backend_client = _get_backend_client(context)
     text = update.message.text or ""
     user_id = str(update.effective_user.id)
+    numeric_id = update.effective_user.id
+
+    if numeric_id not in ALLOWED_USER_IDS:
+        logger.warning("Blocked message from unauthorized user_id=%s", numeric_id)
+        await update.message.reply_text("Sorry, this bot is restricted to approved users.")
+        return
 
     try:
         data = await backend_client.create_idea(text=text, user_id=user_id, source="telegram")
