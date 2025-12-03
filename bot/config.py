@@ -18,6 +18,6 @@ def _load_env() -> None:
 
 _load_env()
 
-DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
