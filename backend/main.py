@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel, Field
 
 from backend.processing import classify_tags, create_summary, create_title
+from backend.github_client import create_issue
 
 # Basic logger for the backend module
 logging.basicConfig(level=logging.INFO)
@@ -39,19 +40,38 @@ def health() -> dict[str, str]:
 
 
 @app.post("/ideas", response_model=IdeaResponse)
-def create_idea(payload: IdeaRequest) -> IdeaResponse:
-    logger.info("Creating idea (user=%s, source=%s): %s", payload.user_id, payload.source, payload.text)
+async def create_idea(payload: IdeaRequest) -> IdeaResponse:
+    logger.info(
+        "Creating idea (user=%s, source=%s): %s",
+        payload.user_id,
+        payload.source,
+        payload.text,
+    )
     title = create_title(payload.text)
     summary = create_summary(payload.text)
     tags = classify_tags(payload.text)
     idea_id = uuid4().hex[:10]
     fake_url = f"https://example.com/idea/{idea_id}"
+    metadata = {"source": payload.source, "user_id": payload.user_id}
+
+    try:
+        issue_url = await create_issue(
+            title=title,
+            summary=summary,
+            tags=tags,
+            original_text=payload.text,
+            metadata=metadata,
+        )
+    except Exception as exc:
+        logger.exception("Failed to create GitHub issue: %s", exc)
+        issue_url = fake_url
+
     logger.info(
         "Created idea response (id=%s, title=%s, tags=%s, url=%s)",
         idea_id,
         title,
         tags,
-        fake_url,
+        issue_url,
     )
 
-    return IdeaResponse(title=title, summary=summary, tags=tags, url=fake_url)
+    return IdeaResponse(title=title, summary=summary, tags=tags, url=issue_url)
