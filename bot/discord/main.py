@@ -48,12 +48,12 @@ class IdeaInboxBot(discord.Client):
             await message.reply("Sorry, I couldn't reach the backend right now.")
             return
         except BackendResponseError:
-            await message.reply("Sorry, I couldn't log that idea (backend error).")
+            await message.reply("Sorry, I couldn't create that idea (backend error).")
             return
 
         title = data.get("title", "Untitled")
         url = data.get("url", BACKEND_URL)
-        await message.reply(f"💡 Logged: **{title}**\n{url}")
+        await message.reply(f"💡 Created issue: **{title}**\n{url}")
 
     @staticmethod
     def _should_process_message(message: Message) -> bool:

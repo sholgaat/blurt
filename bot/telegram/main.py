@@ -42,7 +42,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     title = data.get("title", "Untitled")
     url = data.get("url", BACKEND_URL)
-    await update.message.reply_text(f"💡 Logged: {title}\n{url}")
+    await update.message.reply_text(f"💡 Created issue: {title}\n{url}")
 
 
 async def _on_startup(application: Application) -> None:

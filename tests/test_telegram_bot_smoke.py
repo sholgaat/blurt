@@ -76,7 +76,7 @@ async def test_handle_message_calls_backend_and_replies():
     await telegram_main.handle_message(update, context)
 
     assert backend.called_with == ("An idea", "42", "telegram")
-    assert update.message.replies == ["💡 Logged: Test Idea\nhttp://example.com/idea"]
+    assert update.message.replies == ["💡 Created issue: Test Idea\nhttp://example.com/idea"]
 
 
 @pytest.mark.asyncio
