@@ -7,7 +7,12 @@ import logging
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 
-from backend.processing import classify_tags, create_summary, create_title
+from backend.processing import (
+    classify_tags,
+    create_summary,
+    create_title,
+    ensure_default_tag,
+)
 from backend.github_client import create_issue
 
 # Basic logger for the backend module
@@ -49,7 +54,7 @@ async def create_idea(payload: IdeaRequest) -> IdeaResponse:
     )
     title = create_title(payload.text)
     summary = create_summary(payload.text)
-    tags = classify_tags(payload.text)
+    tags = ensure_default_tag(classify_tags(payload.text))
     idea_id = uuid4().hex[:10]
     fake_url = f"https://example.com/idea/{idea_id}"
     metadata = {"source": payload.source, "user_id": payload.user_id}
