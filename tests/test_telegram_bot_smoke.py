@@ -49,8 +49,11 @@ class DummyUser:
 
 
 class DummyApplication:
-    def __init__(self, backend_client: IdeaBackendClient):
-        self.bot_data = {"backend_client": backend_client}
+    def __init__(self, backend_client: IdeaBackendClient | None):
+        if backend_client is not None:
+            self.bot_data = {"backend_client": backend_client}
+        else:
+            self.bot_data = {}
 
 
 class DummyContext:
@@ -167,7 +170,6 @@ async def test_on_startup_starts_backend_client():
 async def test_on_startup_with_no_backend_client():
     """Test that _on_startup handles missing backend client gracefully."""
     application = DummyApplication(backend_client=None)
-    application.bot_data = {}
     
     # Should not raise an exception
     await telegram_main._on_startup(application)
@@ -195,7 +197,6 @@ async def test_on_shutdown_closes_backend_client():
 async def test_on_shutdown_with_no_backend_client():
     """Test that _on_shutdown handles missing backend client gracefully."""
     application = DummyApplication(backend_client=None)
-    application.bot_data = {}
     
     # Should not raise an exception
     await telegram_main._on_shutdown(application)
