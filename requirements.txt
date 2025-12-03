@@ -4,3 +4,5 @@ httpx
 pydantic
 discord.py
 python-dotenv
+python-telegram-bot
+pytest
