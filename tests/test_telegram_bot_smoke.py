@@ -7,17 +7,27 @@ from bot.shared.backend_client import (
     IdeaBackendClient,
 )
 
+# Constants
+_TEST_BACKEND_URL = "http://example.com"
 
-class DummyBackend(IdeaBackendClient):
+
+class BaseMockBackend(IdeaBackendClient):
+    """Base class for mock backend implementations."""
+
     def __init__(self):
-        super().__init__(base_url="http://example.com")
-        self.called_with = None
+        super().__init__(base_url=_TEST_BACKEND_URL)
 
     async def start(self) -> None:  # pragma: no cover - no-op for tests
         return None
 
     async def close(self) -> None:  # pragma: no cover - no-op for tests
         return None
+
+
+class DummyBackend(BaseMockBackend):
+    def __init__(self):
+        super().__init__()
+        self.called_with = None
 
     async def create_idea(self, text: str, user_id: str, source: str) -> dict:
         self.called_with = (text, user_id, source)
@@ -73,33 +83,15 @@ def test_build_application_wires_backend_client():
     assert application.bot_data["backend_client"] is backend
 
 
-class BackendRaisesConnectionError(IdeaBackendClient):
+class BackendRaisesConnectionError(BaseMockBackend):
     """Mock backend that raises BackendConnectionError."""
-
-    def __init__(self):
-        super().__init__(base_url="http://example.com")
-
-    async def start(self) -> None:  # pragma: no cover - no-op for tests
-        return None
-
-    async def close(self) -> None:  # pragma: no cover - no-op for tests
-        return None
 
     async def create_idea(self, text: str, user_id: str, source: str) -> dict:
         raise BackendConnectionError("Failed to reach backend.")
 
 
-class BackendRaisesResponseError(IdeaBackendClient):
+class BackendRaisesResponseError(BaseMockBackend):
     """Mock backend that raises BackendResponseError."""
-
-    def __init__(self):
-        super().__init__(base_url="http://example.com")
-
-    async def start(self) -> None:  # pragma: no cover - no-op for tests
-        return None
-
-    async def close(self) -> None:  # pragma: no cover - no-op for tests
-        return None
 
     async def create_idea(self, text: str, user_id: str, source: str) -> dict:
         raise BackendResponseError("Backend returned an error status.")
