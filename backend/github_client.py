@@ -23,14 +23,10 @@ def _build_issue_body(
     metadata: Optional[Mapping[str, Optional[str]]] = None,
 ) -> str:
     quoted = "\n".join(f"> {line}" for line in (original_text or "").splitlines()) or "> (empty)"
-    tag_list = ", ".join(tags) if tags else "none"
 
     body_sections = [
         "## Summary",
         summary or "(no summary)",
-        "",
-        "## Tags",
-        tag_list,
         "",
         "## Original Note",
         quoted,
@@ -42,10 +38,26 @@ def _build_issue_body(
             if value:
                 metadata_entries.append(f"- **{key}**: {value}")
 
+    tag_list = ", ".join(tags)
+    if tag_list:
+        metadata_entries.append(f"- **tags**: {tag_list}")
+
     if metadata_entries:
         body_sections.extend(["", "## Metadata", *metadata_entries])
 
     return "\n".join(body_sections)
+
+
+def _prepare_labels(
+    tags: Iterable[str], metadata: Optional[Mapping[str, Optional[str]]]
+) -> list[str]:
+    labels = list(dict.fromkeys(tags or []))
+    source = (metadata or {}).get("source", "")
+    if isinstance(source, str) and source.lower() == "discord":
+        source_label = "source:discord"
+        if source_label not in labels:
+            labels.append(source_label)
+    return labels
 
 
 async def create_issue(
@@ -58,6 +70,7 @@ async def create_issue(
     owner = _get_env_var("GITHUB_REPO_OWNER")
     repo = _get_env_var("GITHUB_REPO_NAME")
     token = _get_env_var("GITHUB_TOKEN")
+    dry_run = os.getenv("DRY_RUN", "false").lower() == "true"
 
     issue_body = _build_issue_body(summary, tags, original_text, metadata)
     url = f"https://api.github.com/repos/{owner}/{repo}/issues"
@@ -66,11 +79,17 @@ async def create_issue(
         "Authorization": f"token {token}",
         "Accept": "application/vnd.github+json",
     }
+    labels = _prepare_labels(tags, metadata)
     payload = {
         "title": title,
         "body": issue_body,
-        "labels": tags or [],
+        "labels": labels,
     }
+
+    if dry_run:
+        logger.info("Dry run enabled - not creating GitHub issue.")
+        logger.info("Issue payload: %s", payload)
+        return "example.com/dry-run-issue"
 
     async with httpx.AsyncClient() as client:
         response = await client.post(url, json=payload, headers=headers, timeout=20.0)
