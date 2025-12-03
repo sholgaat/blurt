@@ -70,6 +70,7 @@ async def create_issue(
     owner = _get_env_var("GITHUB_REPO_OWNER")
     repo = _get_env_var("GITHUB_REPO_NAME")
     token = _get_env_var("GITHUB_TOKEN")
+    dry_run = os.getenv("DRY_RUN", "false").lower() == "true"
 
     issue_body = _build_issue_body(summary, tags, original_text, metadata)
     url = f"https://api.github.com/repos/{owner}/{repo}/issues"
@@ -84,6 +85,11 @@ async def create_issue(
         "body": issue_body,
         "labels": labels,
     }
+
+    if dry_run:
+        logger.info("Dry run enabled - not creating GitHub issue.")
+        logger.info("Issue payload: %s", payload)
+        return "example.com/dry-run-issue"
 
     async with httpx.AsyncClient() as client:
         response = await client.post(url, json=payload, headers=headers, timeout=20.0)
