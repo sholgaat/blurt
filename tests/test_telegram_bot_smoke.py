@@ -1,6 +1,6 @@
 import pytest
 
-from bot.telegram import main as telegram_main
+from bot.telegram_connector import main as telegram_main
 from bot.shared.backend_client import (
     BackendConnectionError,
     BackendResponseError,
@@ -143,3 +143,59 @@ async def test_handle_message_backend_response_error():
     await telegram_main.handle_message(update, context)
 
     assert update.message.replies == ["Sorry, I couldn't log that idea (backend error)."]
+
+
+@pytest.mark.asyncio
+async def test_on_startup_starts_backend_client():
+    """Test that _on_startup initializes the backend client."""
+    backend = DummyBackend()
+    backend.start_called = False
+    
+    # Override start method to track if it's called
+    async def track_start():
+        backend.start_called = True
+    
+    backend.start = track_start
+    
+    application = DummyApplication(backend)
+    await telegram_main._on_startup(application)
+    
+    assert backend.start_called is True
+
+
+@pytest.mark.asyncio
+async def test_on_startup_with_no_backend_client():
+    """Test that _on_startup handles missing backend client gracefully."""
+    application = DummyApplication(backend_client=None)
+    application.bot_data = {}
+    
+    # Should not raise an exception
+    await telegram_main._on_startup(application)
+
+
+@pytest.mark.asyncio
+async def test_on_shutdown_closes_backend_client():
+    """Test that _on_shutdown closes the backend client."""
+    backend = DummyBackend()
+    backend.close_called = False
+    
+    # Override close method to track if it's called
+    async def track_close():
+        backend.close_called = True
+    
+    backend.close = track_close
+    
+    application = DummyApplication(backend)
+    await telegram_main._on_shutdown(application)
+    
+    assert backend.close_called is True
+
+
+@pytest.mark.asyncio
+async def test_on_shutdown_with_no_backend_client():
+    """Test that _on_shutdown handles missing backend client gracefully."""
+    application = DummyApplication(backend_client=None)
+    application.bot_data = {}
+    
+    # Should not raise an exception
+    await telegram_main._on_shutdown(application)
