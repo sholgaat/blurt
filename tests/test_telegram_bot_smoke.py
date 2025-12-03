@@ -1,7 +1,11 @@
 import pytest
 
 from bot.telegram import main as telegram_main
-from bot.shared.backend_client import IdeaBackendClient
+from bot.shared.backend_client import (
+    BackendConnectionError,
+    BackendResponseError,
+    IdeaBackendClient,
+)
 
 
 class DummyBackend(IdeaBackendClient):
@@ -67,3 +71,59 @@ def test_build_application_wires_backend_client():
     application = telegram_main.build_application(token="TEST", backend_client=backend)
 
     assert application.bot_data["backend_client"] is backend
+
+
+class BackendRaisesConnectionError(IdeaBackendClient):
+    """Mock backend that raises BackendConnectionError."""
+
+    def __init__(self):
+        super().__init__(base_url="http://example.com")
+
+    async def start(self) -> None:  # pragma: no cover - no-op for tests
+        return None
+
+    async def close(self) -> None:  # pragma: no cover - no-op for tests
+        return None
+
+    async def create_idea(self, text: str, user_id: str, source: str) -> dict:
+        raise BackendConnectionError("Failed to reach backend.")
+
+
+class BackendRaisesResponseError(IdeaBackendClient):
+    """Mock backend that raises BackendResponseError."""
+
+    def __init__(self):
+        super().__init__(base_url="http://example.com")
+
+    async def start(self) -> None:  # pragma: no cover - no-op for tests
+        return None
+
+    async def close(self) -> None:  # pragma: no cover - no-op for tests
+        return None
+
+    async def create_idea(self, text: str, user_id: str, source: str) -> dict:
+        raise BackendResponseError("Backend returned an error status.")
+
+
+@pytest.mark.asyncio
+async def test_handle_message_backend_connection_error():
+    """Test that BackendConnectionError is handled gracefully."""
+    backend = BackendRaisesConnectionError()
+    update = DummyUpdate(DummyMessage("An idea"), DummyUser(42))
+    context = DummyContext(backend)
+
+    await telegram_main.handle_message(update, context)
+
+    assert update.message.replies == ["Sorry, I couldn't reach the backend right now."]
+
+
+@pytest.mark.asyncio
+async def test_handle_message_backend_response_error():
+    """Test that BackendResponseError is handled gracefully."""
+    backend = BackendRaisesResponseError()
+    update = DummyUpdate(DummyMessage("An idea"), DummyUser(42))
+    context = DummyContext(backend)
+
+    await telegram_main.handle_message(update, context)
+
+    assert update.message.replies == ["Sorry, I couldn't log that idea (backend error)."]
