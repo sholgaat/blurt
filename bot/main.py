@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from bot.discord_connector.main import main
+from bot.discord.main import main
 
 
 if __name__ == "__main__":
