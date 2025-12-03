@@ -10,10 +10,10 @@ class DummyBackend(IdeaBackendClient):
         self.called_with = None
 
     async def start(self) -> None:  # pragma: no cover - no-op for tests
-        return None
+        pass
 
     async def close(self) -> None:  # pragma: no cover - no-op for tests
-        return None
+        pass
 
     async def create_idea(self, text: str, user_id: str, source: str) -> dict:
         self.called_with = (text, user_id, source)
