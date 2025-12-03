@@ -1,6 +1,6 @@
 import pytest
 
-from bot.telegram_connector import main as telegram_main
+from bot.telegram import main as telegram_main
 from bot.shared.backend_client import (
     BackendConnectionError,
     BackendResponseError,
