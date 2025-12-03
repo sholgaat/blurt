@@ -31,7 +31,7 @@ MANIFEST
 venv/
 ENV/
 env/
-.venv
+.venv/
 
 # IDEs and Editors
 .vscode/
@@ -58,8 +58,7 @@ dmypy.json
 
 # Database
 *.db
-*.sqlite
-*.sqlite3
+*.sqlite*
 
 # OS
 Thumbs.db
