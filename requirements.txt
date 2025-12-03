@@ -6,3 +6,4 @@ discord.py
 python-dotenv
 python-telegram-bot
 pytest
+pytest-asyncio
