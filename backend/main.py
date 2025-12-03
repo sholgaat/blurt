@@ -4,15 +4,10 @@ import logging
 from typing import Optional
 from uuid import uuid4
 
-from fastapi import Body, FastAPI
+from fastapi import Body, FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from backend.processing import (
-    classify_tags,
-    create_summary,
-    create_title,
-    ensure_default_tag,
-)
+from backend.tagging import ensure_default_tag
 from backend.github_client import create_issue
 from backend.llm import LlmError, call_ai_cleanup
 
@@ -46,7 +41,7 @@ def health() -> dict[str, str]:
 
 
 @app.post("/ideas", response_model=IdeaResponse)
-async def create_idea(ai: int = 1, payload: IdeaRequest = Body(...)) -> IdeaResponse:
+async def create_idea(payload: IdeaRequest = Body(...)) -> IdeaResponse:
     logger.info(
         "Creating idea (user=%s, source=%s): %s",
         payload.user_id,
@@ -55,25 +50,18 @@ async def create_idea(ai: int = 1, payload: IdeaRequest = Body(...)) -> IdeaResp
     )
     raw_text = payload.text or ""
 
-    title: str
-    summary: str
-    tags: list[str]
+    try:
+        llm_result = await call_ai_cleanup(raw_text)
+    except LlmError as exc:
+        logger.error("LLM cleanup failed; returning error: %s", exc)
+        raise HTTPException(
+            status_code=503,
+            detail="Idea processing is temporarily unavailable. Please try again later.",
+        ) from exc
 
-    if ai == 1:
-        try:
-            llm_result = await call_ai_cleanup(raw_text)
-            title = llm_result.get("title") or create_title(raw_text)
-            summary = llm_result.get("summary") or create_summary(raw_text)
-            tags = ensure_default_tag(llm_result.get("tags") or [])
-        except LlmError as exc:
-            logger.warning("LLM cleanup failed; falling back to heuristics: %s", exc)
-            title = create_title(raw_text)
-            summary = create_summary(raw_text)
-            tags = ensure_default_tag(classify_tags(raw_text))
-    else:
-        title = create_title(raw_text)
-        summary = create_summary(raw_text)
-        tags = ensure_default_tag(classify_tags(raw_text))
+    title = llm_result.get("title") or ""
+    summary = llm_result.get("summary") or ""
+    tags = ensure_default_tag(llm_result.get("tags") or [])
     idea_id = uuid4().hex[:10]
     metadata = {"source": payload.source, "user_id": payload.user_id}
 
