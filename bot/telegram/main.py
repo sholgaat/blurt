@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 
 from telegram import Update
-from telegram.ext import Application, CallbackContext, ContextTypes, MessageHandler, filters
+from telegram.ext import Application, ContextTypes, MessageHandler, filters
 
 from bot.config import BACKEND_URL, TELEGRAM_BOT_TOKEN
 from bot.shared.backend_client import (
@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def _get_backend_client(context: CallbackContext) -> IdeaBackendClient:
+def _get_backend_client(context: ContextTypes.DEFAULT_TYPE) -> IdeaBackendClient:
     backend_client = context.application.bot_data.get("backend_client")
     if not isinstance(backend_client, IdeaBackendClient):
         raise RuntimeError("Backend client not available on application.")
