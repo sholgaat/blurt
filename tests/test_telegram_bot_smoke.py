@@ -67,9 +67,21 @@ class DummyUpdate:
         self.effective_user = user
 
 
+@pytest.fixture(autouse=True)
+def reset_allowed_users():
+    """Restore the default allow-list after each test."""
+    original = set(telegram_main.TELEGRAM_ALLOWED_USER_IDS)
+    try:
+        yield
+    finally:
+        telegram_main.TELEGRAM_ALLOWED_USER_IDS.clear()
+        telegram_main.TELEGRAM_ALLOWED_USER_IDS.update(original)
+
+
 @pytest.mark.asyncio
 async def test_handle_message_calls_backend_and_replies():
     backend = DummyBackend()
+    telegram_main.TELEGRAM_ALLOWED_USER_IDS.add(42)
     update = DummyUpdate(DummyMessage("An idea"), DummyUser(42))
     context = DummyContext(backend)
 
@@ -82,6 +94,7 @@ async def test_handle_message_calls_backend_and_replies():
 @pytest.mark.asyncio
 async def test_handle_message_returns_early_when_no_message():
     backend = DummyBackend()
+    telegram_main.TELEGRAM_ALLOWED_USER_IDS.add(42)
     update = DummyUpdate(None, DummyUser(42))
     context = DummyContext(backend)
 
@@ -128,6 +141,7 @@ class BackendRaisesResponseError(BaseMockBackend):
 async def test_handle_message_backend_connection_error():
     """Test that BackendConnectionError is handled gracefully."""
     backend = BackendRaisesConnectionError()
+    telegram_main.TELEGRAM_ALLOWED_USER_IDS.add(42)
     update = DummyUpdate(DummyMessage("An idea"), DummyUser(42))
     context = DummyContext(backend)
 
@@ -140,6 +154,7 @@ async def test_handle_message_backend_connection_error():
 async def test_handle_message_backend_response_error():
     """Test that BackendResponseError is handled gracefully."""
     backend = BackendRaisesResponseError()
+    telegram_main.TELEGRAM_ALLOWED_USER_IDS.add(42)
     update = DummyUpdate(DummyMessage("An idea"), DummyUser(42))
     context = DummyContext(backend)
 
@@ -200,3 +215,13 @@ async def test_on_shutdown_with_no_backend_client():
     
     # Should not raise an exception
     await telegram_main._on_shutdown(application)
+@pytest.mark.asyncio
+async def test_handle_message_blocks_unapproved_user():
+    backend = DummyBackend()
+    update = DummyUpdate(DummyMessage("Idea text"), DummyUser(999))
+    context = DummyContext(backend)
+
+    await telegram_main.handle_message(update, context)
+
+    assert backend.called_with is None
+    assert update.message.replies == ["Sorry, this bot is restricted to approved users."]

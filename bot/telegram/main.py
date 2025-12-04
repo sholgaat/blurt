@@ -1,22 +1,16 @@
 from __future__ import annotations
 
 import logging
-from typing import Set
 
 from telegram import Update
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
 
-from bot.config import BACKEND_URL, TELEGRAM_BOT_TOKEN
-from bot.shared.backend_client import (
-    BackendConnectionError,
-    BackendResponseError,
-    IdeaBackendClient,
-)
+from bot.config import BACKEND_URL, TELEGRAM_BOT_TOKEN, TELEGRAM_ALLOWED_USER_IDS
+from bot.shared.backend_client import IdeaBackendClient
+from bot.shared.idea_service import format_issue_reply, submit_idea
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-ALLOWED_USER_IDS: Set[int] = {5241294807}
 
 def _get_backend_client(context: ContextTypes.DEFAULT_TYPE) -> IdeaBackendClient:
     backend_client = context.application.bot_data.get("backend_client")
@@ -34,23 +28,23 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     user_id = str(update.effective_user.id)
     numeric_id = update.effective_user.id
 
-    if numeric_id not in ALLOWED_USER_IDS:
+    if numeric_id not in TELEGRAM_ALLOWED_USER_IDS:
         logger.warning("Blocked message from unauthorized user_id=%s", numeric_id)
         await update.message.reply_text("Sorry, this bot is restricted to approved users.")
         return
 
-    try:
-        data = await backend_client.create_idea(text=text, user_id=user_id, source="telegram")
-    except BackendConnectionError:
-        await update.message.reply_text("Sorry, I couldn't reach the backend right now.")
-        return
-    except BackendResponseError:
-        await update.message.reply_text("Sorry, I couldn't log that idea (backend error).")
+    result, error = await submit_idea(
+        backend_client,
+        text=text,
+        user_id=user_id,
+        source="telegram",
+        fallback_url=BACKEND_URL,
+    )
+    if error:
+        await update.message.reply_text(error)
         return
 
-    title = data.get("title", "Untitled")
-    url = data.get("url", BACKEND_URL)
-    await update.message.reply_text(f"💡 Created issue: {title}\n{url}")
+    await update.message.reply_text(format_issue_reply(result))
 
 
 async def _on_startup(application: Application) -> None:

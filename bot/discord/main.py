@@ -5,12 +5,9 @@ import logging
 import discord
 from discord import Message
 
-from bot.config import BACKEND_URL, DISCORD_TOKEN
-from bot.shared.backend_client import (
-    BackendConnectionError,
-    BackendResponseError,
-    IdeaBackendClient,
-)
+from bot.config import BACKEND_URL, DISCORD_BOT_TOKEN
+from bot.shared.backend_client import IdeaBackendClient
+from bot.shared.idea_service import format_issue_reply, submit_idea
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -38,22 +35,18 @@ class IdeaInboxBot(discord.Client):
         if not self._should_process_message(message):
             return
 
-        try:
-            data = await self.backend_client.create_idea(
-                text=message.content or "",
-                user_id=str(message.author.id),
-                source="discord",
-            )
-        except BackendConnectionError:
-            await message.reply("Sorry, I couldn't reach the backend right now.")
-            return
-        except BackendResponseError:
-            await message.reply("Sorry, I couldn't create that idea (backend error).")
+        result, error = await submit_idea(
+            self.backend_client,
+            text=message.content or "",
+            user_id=str(message.author.id),
+            source="discord",
+            fallback_url=BACKEND_URL,
+        )
+        if error:
+            await message.reply(error)
             return
 
-        title = data.get("title", "Untitled")
-        url = data.get("url", BACKEND_URL)
-        await message.reply(f"💡 Created issue: **{title}**\n{url}")
+        await message.reply(format_issue_reply(result, bold_title=True))
 
     @staticmethod
     def _should_process_message(message: Message) -> bool:
@@ -66,15 +59,15 @@ class IdeaInboxBot(discord.Client):
 
 
 def main() -> None:
-    if not DISCORD_TOKEN:
-        raise RuntimeError("DISCORD_TOKEN is not set in the environment.")
+    if not DISCORD_BOT_TOKEN:
+        raise RuntimeError("DISCORD_BOT_TOKEN is not set in the environment.")
 
     intents = discord.Intents.default()
     intents.message_content = True
 
     backend_client = IdeaBackendClient(BACKEND_URL)
     client = IdeaInboxBot(intents=intents, backend_client=backend_client)
-    client.run(DISCORD_TOKEN)
+    client.run(DISCORD_BOT_TOKEN)
 
 
 if __name__ == "__main__":

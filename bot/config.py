@@ -1,23 +1,11 @@
 from __future__ import annotations
 
-import os
-from pathlib import Path
+from idea_inbox import settings
 
-from dotenv import load_dotenv
+settings.ensure_env_loaded()
 
-
-def _load_env() -> None:
-    """Load environment variables from .env if present."""
-    env_path = Path(".env")
-    if env_path.exists():
-        load_dotenv(dotenv_path=env_path)
-    else:
-        # Still attempt to load defaults from environment without a file.
-        load_dotenv()
-
-
-_load_env()
-
-DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+DISCORD_BOT_TOKEN = settings.get_discord_bot_token()
+DISCORD_TOKEN = DISCORD_BOT_TOKEN  # Backwards compatibility for discord client.
+TELEGRAM_BOT_TOKEN = settings.get_telegram_bot_token()
+TELEGRAM_ALLOWED_USER_IDS = settings.get_telegram_allowed_user_ids()
+BACKEND_URL = settings.get_backend_url()

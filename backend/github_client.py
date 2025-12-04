@@ -1,19 +1,13 @@
 from __future__ import annotations
 
 import logging
-import os
 from typing import Iterable, Mapping, Optional
 
 import httpx
 
+from idea_inbox import settings
+
 logger = logging.getLogger(__name__)
-
-
-def _get_env_var(name: str) -> str:
-    value = os.getenv(name)
-    if not value:
-        raise ValueError(f"Environment variable {name} is required for GitHub access.")
-    return value
 
 
 def _build_issue_body(
@@ -67,10 +61,10 @@ async def create_issue(
     original_text: str,
     metadata: Optional[Mapping[str, Optional[str]]] = None,
 ) -> str:
-    owner = _get_env_var("GITHUB_REPO_OWNER")
-    repo = _get_env_var("GITHUB_REPO_NAME")
-    token = _get_env_var("GITHUB_TOKEN")
-    dry_run = os.getenv("DRY_RUN", "false").lower() == "true"
+    owner = settings.require_env("GITHUB_REPO_OWNER")
+    repo = settings.require_env("GITHUB_REPO_NAME")
+    token = settings.require_env("GITHUB_TOKEN")
+    dry_run = settings.is_dry_run_enabled()
 
     issue_body = _build_issue_body(summary, tags, original_text, metadata)
     url = f"https://api.github.com/repos/{owner}/{repo}/issues"

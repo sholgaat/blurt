@@ -3,12 +3,13 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import os
 from typing import Any, Dict, List
 
 from google import genai
 from google.genai import types
 import tiktoken
+
+from idea_inbox import settings
 
 LOGGER = logging.getLogger(__name__)
 MODEL_NAME = "gemini-2.5-flash-lite"
@@ -40,9 +41,9 @@ class LlmError(Exception):
 
 async def call_ai_cleanup(raw_note: str) -> Dict[str, Any]:
     """Call Google Gemini to clean up an idea note."""
-    api_key = os.getenv("GEMINI_API_KEY")
+    api_key = settings.get_google_api_key()
     if not api_key:
-        raise LlmError("GEMINI_API_KEY is not configured.")
+        raise LlmError("GOOGLE_API_KEY is not configured.")
 
     client = genai.Client(api_key=api_key)
     config = types.GenerateContentConfig(

@@ -75,7 +75,10 @@ async def create_idea(payload: IdeaRequest = Body(...)) -> IdeaResponse:
         )
     except Exception as exc:
         logger.exception("Failed to create GitHub issue: %s", exc)
-        return
+        raise HTTPException(
+            status_code=502,
+            detail="Failed to create GitHub issue. Please try again later.",
+        ) from exc
 
     logger.info(
         "Created idea response (id=%s, title=%s, tags=%s, url=%s)",
