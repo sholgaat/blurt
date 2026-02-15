@@ -71,8 +71,8 @@ def get_telegram_allowed_user_ids() -> Set[int]:
     return ids or set(_DEFAULT_TELEGRAM_ALLOWED_IDS)
 
 
-def get_google_api_key() -> str | None:
-    return _get_env("GOOGLE_API_KEY")
+def get_gemini_api_key() -> str | None:
+    return _get_env("GEMINI_API_KEY")
 
 
 def get_github_repo_owner() -> str | None:

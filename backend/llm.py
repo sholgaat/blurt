@@ -41,9 +41,9 @@ class LlmError(Exception):
 
 async def call_ai_cleanup(raw_note: str) -> Dict[str, Any]:
     """Call Google Gemini to clean up an idea note."""
-    api_key = settings.get_google_api_key()
+    api_key = settings.get_gemini_api_key()
     if not api_key:
-        raise LlmError("GOOGLE_API_KEY is not configured.")
+        raise LlmError("GEMINI_API_KEY is not configured.")
 
     client = genai.Client(api_key=api_key)
     config = types.GenerateContentConfig(
