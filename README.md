@@ -1,40 +1,13 @@
 # idea-inbox
-A simple tool to help record ideas for new coding projects.
+A tool to capture ideas from chat, use Gemini to clean them up, and create GitHub issues automatically.
 
 ## Setup
 
 ### Prerequisites
-- Python 3.12 or higher
+- Docker + Docker Compose
+- Python 3.12 or higher (only needed for direct/manual runs and local tests)
 
-### 1. Create a Virtual Environment
-
-Create a virtual environment to isolate project dependencies:
-
-```bash
-python3 -m venv venv
-```
-
-### 2. Activate the Virtual Environment
-
-**On Linux/macOS:**
-```bash
-source venv/bin/activate
-```
-
-**On Windows:**
-```bash
-venv\Scripts\activate
-```
-
-### 3. Install Requirements
-
-Install all project dependencies from `requirements.txt`:
-
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Configure Environment Variables
+### 1. Configure Environment Variables
 
 Copy the example environment file and fill in your credentials:
 
@@ -51,7 +24,7 @@ DISCORD_BOT_TOKEN=your_discord_bot_token_here
 # Required for Telegram bot
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
 
-# Backend URL (default: http://localhost:8000)
+# Backend URL optional (defaults to http://localhost:8000)
 BACKEND_URL=http://localhost:8000
 
 # Required for backend GitHub integration
@@ -68,51 +41,68 @@ DRY_RUN=false
 
 ## Running the Application
 
-### Run the Backend
+### Recommended: Run with Docker Compose
 
-The backend is a FastAPI application that processes ideas and creates GitHub issues.
+The recommended way to run the full stack is Docker Compose.
 
-Start the backend server:
+Start services:
+
+```bash
+docker compose up -d --build
+```
+
+This starts:
+- `backend` on `http://localhost:8000`
+- `bot` with provider selected by `BOT_PROVIDER` (`discord` or `telegram`)
+
+Check status:
+
+```bash
+docker compose ps
+docker compose logs -f
+```
+
+Stop services:
+
+```bash
+docker compose down
+```
+
+### Advanced: Run Without Docker (Direct Python)
+
+Use this only if you want manual process control.
+
+#### 1. Create and activate a virtual environment
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+#### 2. Run backend
 
 ```bash
 uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-The backend will be available at `http://localhost:8000`.
+#### 3. Run bot runtime
 
-You can check if it's running by visiting `http://localhost:8000/health` or using:
+Set one of:
+- `BOT_PROVIDER=discord`
+- `BOT_PROVIDER=telegram`
 
-```bash
-curl http://localhost:8000/health
-```
-
-### Run the Discord Bot
-
-The Discord bot listens for messages in DMs or in channels named `#idea-inbox`.
-
-**Prerequisites:**
-- Set `DISCORD_BOT_TOKEN` in your `.env` file
-- Ensure the backend is running
-
-Run the Discord bot:
+Run:
 
 ```bash
-python -m bot.discord.main
+python -m bot.main
 ```
 
-### Run the Telegram Bot
+#### Provider notes
 
-The Telegram bot processes messages from authorized users.
+- Discord mode listens for DMs and messages in channels named `#idea-inbox`.
+- Telegram mode processes only `TELEGRAM_ALLOWED_USER_IDS` (comma-separated IDs).
 
-**Prerequisites:**
-- Set `TELEGRAM_BOT_TOKEN` in your `.env` file
-- Ensure the backend is running
-
-Run the Telegram bot:
-
-```bash
-python -m bot.telegram.main
-```
 
 ## Testing
 
@@ -124,6 +114,7 @@ pytest
 
 ## Architecture
 
-- **Backend** (`backend/`): FastAPI service that processes ideas using LLM and creates GitHub issues
-- **Discord Bot** (`bot/discord/`): Discord client that forwards messages to the backend
-- **Telegram Bot** (`bot/telegram/`): Telegram client that forwards messages to the backend
+- **Backend** (`backend/`): FastAPI service that uses Gemini to structure ideas and creates GitHub issues
+- **Bot runtime** (`bot/main.py`): provider switch (`discord` or `telegram`) based on `BOT_PROVIDER`
+- **Discord bot** (`bot/discord/`): Discord client that forwards messages to the backend
+- **Telegram bot** (`bot/telegram/`): Telegram client that forwards messages to the backend

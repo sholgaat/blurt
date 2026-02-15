@@ -4,27 +4,26 @@ This project uses two agents/components:
 
 ## 1. Backend (FastAPI)
 - Location: backend/
-- Responsibilities (v0 only):
+- Responsibilities (current):
   - Provide GET /health → {"status": "ok"}.
   - Provide POST /ideas → accept {text, user_id, source}.
-  - Run simple heuristics:
-    - create_title()
-    - create_summary()
-    - classify_tags()
-  - Return {title, summary, tags, url} where url is a FAKE placeholder.
-- No GitHub integration yet.
-- No LLM usage yet.
+  - Use Gemini to generate:
+    - title
+    - summary
+    - tags
+  - Create a GitHub issue and return {title, summary, tags, url}.
+  - Support `DRY_RUN=true` for testing without creating a real issue.
 
-## 2. Discord Bot (discord.py)
+## 2. Bot Runtime (Discord + Telegram)
 - Location: bot/
-- Responsibilities (v0 only):
-  - Listen for DMs and messages in #idea-inbox.
+- Responsibilities (current):
+  - Run either Discord or Telegram bot based on `BOT_PROVIDER`.
+  - Discord: listen for DMs and messages in #idea-inbox.
+  - Telegram: listen for messages from allowed user IDs.
   - POST message content to backend /ideas.
-  - Reply with the processed title + fake URL.
-- No GitHub integration yet.
-- No LLM usage yet.
+  - Reply with the processed title + returned issue URL.
 
-## Scope boundaries for v0
-- Backend and bot must remain minimal.
-- No external APIs except bot→backend.
-- Real GitHub issue creation and LLM polishing will be implemented in v1.
+## Current scope boundaries
+- Bots call only the backend service directly.
+- Backend integrations are limited to Gemini (cleanup/structuring) and GitHub Issues creation.
+- No OAuth flow or advanced authentication yet.
