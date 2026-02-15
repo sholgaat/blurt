@@ -1,13 +1,37 @@
 # idea-inbox
 A tool to capture ideas from chat, use Gemini to clean them up, and create GitHub issues automatically.
 
+## Quickstart (60 Seconds)
+
+```bash
+# 1) Create service env files
+cp .env.backend.example .env.backend
+cp .env.bot.example .env.bot
+
+# 2) Fill required values
+# - .env.backend: GEMINI_API_KEY, GITHUB_TOKEN, GITHUB_REPO_OWNER, GITHUB_REPO_NAME
+# - .env.bot: BOT_PROVIDER + bot token(s)
+
+# 3) Safe first run (no real GitHub issues)
+echo "DRY_RUN=true" >> .env.backend
+
+# 4) Start
+docker compose up -d --build
+
+# 5) Watch logs
+docker compose logs -f backend
+docker compose logs -f bot
+```
+
+In Docker Compose, backend is internal-only (`http://backend:8000`) and not exposed to host port `8000`.
+
 ## Setup
 
 ### Prerequisites
 - Docker + Docker Compose
 - Python 3.12 or higher (only needed for direct/manual runs and local tests)
 
-### 1. Configure Environment Variables
+### 1. Create service env files
 
 Copy the service-specific environment templates:
 
@@ -16,7 +40,7 @@ cp .env.backend.example .env.backend
 cp .env.bot.example .env.bot
 ```
 
-Edit `.env.backend` with backend credentials:
+### 2. Configure backend secrets (`.env.backend`)
 
 ```bash
 # Required for backend GitHub integration
@@ -31,7 +55,7 @@ GEMINI_API_KEY=your_gemini_api_key
 DRY_RUN=false
 ```
 
-Edit `.env.bot` with bot-only runtime values:
+### 3. Configure bot runtime (`.env.bot`)
 
 ```bash
 BOT_PROVIDER=discord
@@ -47,27 +71,38 @@ BACKEND_URL=http://backend:8000
 
 The recommended way to run the full stack is Docker Compose.
 
-Start services:
+Start (or rebuild) services:
 
 ```bash
 docker compose up -d --build
 ```
 
 This starts:
-- `backend` on `http://localhost:8000`
+- `backend` on the internal Compose network (`http://backend:8000`)
 - `bot` with provider selected by `BOT_PROVIDER` (`discord` or `telegram`)
+
+Note:
+- Backend is intentionally internal-only in Compose (not published to host port `8000`).
+- Set `DRY_RUN=true` in `.env.backend` if you want to test without creating real GitHub issues.
 
 Check status:
 
 ```bash
 docker compose ps
-docker compose logs -f
+docker compose logs -f backend
+docker compose logs -f bot
 ```
 
 Stop services:
 
 ```bash
 docker compose down
+```
+
+Health check from inside the backend container:
+
+```bash
+docker compose exec backend curl -fsS http://localhost:8000/health
 ```
 
 ### Advanced: Run Without Docker (Direct Python)
@@ -82,13 +117,21 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-#### 2. Run backend
+#### 2. Configure env files for direct mode
+
+For direct runs, use host-local backend URL in `.env.bot`:
+
+```bash
+BACKEND_URL=http://localhost:8000
+```
+
+#### 3. Run backend
 
 ```bash
 uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-#### 3. Run bot runtime
+#### 4. Run bot runtime
 
 Set one of:
 - `BOT_PROVIDER=discord`
@@ -104,14 +147,14 @@ python -m bot.main
 
 - Discord mode listens for DMs and messages in channels named `#idea-inbox`.
 - Telegram mode processes only `TELEGRAM_ALLOWED_USER_IDS` (comma-separated IDs).
-
+- Diagram: see `docs/flow.md`.
 
 ## Testing
 
 Run the test suite:
 
 ```bash
-pytest
+python -m pytest
 ```
 
 ## Architecture
