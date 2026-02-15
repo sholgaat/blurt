@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from functools import lru_cache
 from typing import Any, Dict, List
 
 from google import genai
@@ -16,7 +17,6 @@ MODEL_NAME = "gemini-2.5-flash-lite"
 SYSTEM_INSTRUCTION = (
     "Extract a short descriptive title, a clear concise summary, and 2–7 relevant tags from the user text."
 )
-ENCODING = tiktoken.get_encoding("cl100k_base")
 
 
 def _escape_text(text: str) -> str:
@@ -25,11 +25,23 @@ def _escape_text(text: str) -> str:
     return dumped[1:-1]
 
 
+@lru_cache(maxsize=1)
+def _get_encoding() -> tiktoken.Encoding | None:
+    try:
+        return tiktoken.get_encoding("cl100k_base")
+    except Exception as exc:  # pragma: no cover - defensive logging
+        LOGGER.warning("Failed to initialize tokenizer encoding: %s", exc)
+        return None
+
+
 def _count_tokens(text: str) -> int:
     if not text:
         return 0
+    encoding = _get_encoding()
+    if encoding is None:
+        return 0
     try:
-        return len(ENCODING.encode(text))
+        return len(encoding.encode(text))
     except Exception as exc:  # pragma: no cover - defensive logging
         LOGGER.warning("Failed to count tokens: %s", exc)
         return 0

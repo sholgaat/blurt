@@ -43,10 +43,9 @@ def health() -> dict[str, str]:
 @app.post("/ideas", response_model=IdeaResponse)
 async def create_idea(payload: IdeaRequest = Body(...)) -> IdeaResponse:
     logger.info(
-        "Creating idea (user=%s, source=%s): %s",
+        "Creating idea (user=%s, source=%s)",
         payload.user_id,
-        payload.source,
-        payload.text,
+        payload.source
     )
     raw_text = payload.text or ""
 
