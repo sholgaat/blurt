@@ -98,13 +98,17 @@ prompt_required GITHUB_REPO_NAME "GITHUB_REPO_NAME"
 
 if [[ "$BOT_PROVIDER" == "discord" ]]; then
   prompt_secret_required DISCORD_BOT_TOKEN "DISCORD_BOT_TOKEN"
+  prompt_required DISCORD_ALLOWED_USER_IDS "DISCORD_ALLOWED_USER_IDS (comma-separated Discord user IDs permitted to submit ideas)"
+  prompt_default DISCORD_IDEA_CHANNEL_ID "DISCORD_IDEA_CHANNEL_ID (channel ID to listen in; leave blank for DMs only)" ""
   prompt_secret_optional TELEGRAM_BOT_TOKEN "TELEGRAM_BOT_TOKEN"
+  TELEGRAM_ALLOWED_USER_IDS=""
 else
   prompt_secret_required TELEGRAM_BOT_TOKEN "TELEGRAM_BOT_TOKEN"
+  prompt_required TELEGRAM_ALLOWED_USER_IDS "TELEGRAM_ALLOWED_USER_IDS (comma-separated Telegram user IDs permitted to submit ideas)"
   prompt_secret_optional DISCORD_BOT_TOKEN "DISCORD_BOT_TOKEN"
+  DISCORD_ALLOWED_USER_IDS=""
+  DISCORD_IDEA_CHANNEL_ID=""
 fi
-
-prompt_default TELEGRAM_ALLOWED_USER_IDS "TELEGRAM_ALLOWED_USER_IDS (comma-separated)" "123456789"
 prompt_default DRY_RUN "DRY_RUN (true|false)" "true"
 prompt_default BACKEND_URL "BACKEND_URL for bot container" "http://backend:8000"
 
@@ -154,6 +158,8 @@ EOF
 cat >"$BOT_ENV_TMP" <<EOF
 BOT_PROVIDER=$BOT_PROVIDER
 DISCORD_BOT_TOKEN=$DISCORD_BOT_TOKEN
+DISCORD_ALLOWED_USER_IDS=$DISCORD_ALLOWED_USER_IDS
+DISCORD_IDEA_CHANNEL_ID=$DISCORD_IDEA_CHANNEL_ID
 TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN
 TELEGRAM_ALLOWED_USER_IDS=$TELEGRAM_ALLOWED_USER_IDS
 BACKEND_URL=$BACKEND_URL

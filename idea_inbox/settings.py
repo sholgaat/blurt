@@ -7,8 +7,6 @@ from typing import Set
 
 from dotenv import load_dotenv
 
-_DEFAULT_TELEGRAM_ALLOWED_IDS: Set[int] = {123456789}
-
 
 @lru_cache(maxsize=1)
 def _load_env() -> None:
@@ -56,36 +54,41 @@ def get_telegram_bot_token() -> str | None:
     return _get_env("TELEGRAM_BOT_TOKEN")
 
 
-def get_telegram_allowed_user_ids() -> Set[int]:
-    raw_value = _get_env("TELEGRAM_ALLOWED_USER_IDS")
+def _parse_int_list(raw_value: str | None) -> Set[int]:
     ids: Set[int] = set()
-    if raw_value:
-        for chunk in raw_value.split(","):
-            chunk = chunk.strip()
-            if not chunk:
-                continue
-            try:
-                ids.add(int(chunk))
-            except ValueError:
-                continue
-    return ids or set(_DEFAULT_TELEGRAM_ALLOWED_IDS)
+    if not raw_value:
+        return ids
+    for chunk in raw_value.split(","):
+        chunk = chunk.strip()
+        if not chunk:
+            continue
+        try:
+            ids.add(int(chunk))
+        except ValueError:
+            continue
+    return ids
+
+
+def get_telegram_allowed_user_ids() -> Set[int]:
+    return _parse_int_list(_get_env("TELEGRAM_ALLOWED_USER_IDS"))
+
+
+def get_discord_allowed_user_ids() -> Set[int]:
+    return _parse_int_list(_get_env("DISCORD_ALLOWED_USER_IDS"))
+
+
+def get_discord_idea_channel_id() -> int | None:
+    raw = _get_env("DISCORD_IDEA_CHANNEL_ID")
+    if not raw or not raw.strip():
+        return None
+    try:
+        return int(raw.strip())
+    except ValueError:
+        return None
 
 
 def get_gemini_api_key() -> str | None:
     return _get_env("GEMINI_API_KEY")
-
-
-def get_github_repo_owner() -> str | None:
-    return _get_env("GITHUB_REPO_OWNER")
-
-
-def get_github_repo_name() -> str | None:
-    return _get_env("GITHUB_REPO_NAME")
-
-
-def get_github_token() -> str | None:
-    return _get_env("GITHUB_TOKEN")
-
 
 def is_dry_run_enabled() -> bool:
     return _parse_bool(_get_env("DRY_RUN"), False)

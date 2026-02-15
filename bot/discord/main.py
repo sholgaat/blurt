@@ -5,7 +5,12 @@ import logging
 import discord
 from discord import Message
 
-from bot.config import BACKEND_URL, DISCORD_BOT_TOKEN
+from bot.config import (
+    BACKEND_URL,
+    DISCORD_ALLOWED_USER_IDS,
+    DISCORD_BOT_TOKEN,
+    DISCORD_IDEA_CHANNEL_ID,
+)
 from bot.shared.backend_client import IdeaBackendClient
 from bot.shared.idea_service import format_issue_reply, submit_idea
 
@@ -14,12 +19,27 @@ logger = logging.getLogger(__name__)
 
 
 class IdeaInboxBot(discord.Client):
-    def __init__(self, *, intents: discord.Intents, backend_client: IdeaBackendClient):
+    def __init__(
+        self,
+        *,
+        intents: discord.Intents,
+        backend_client: IdeaBackendClient,
+        allowed_user_ids: set[int],
+        idea_channel_id: int | None,
+    ):
         super().__init__(intents=intents)
         self.backend_client = backend_client
+        self.allowed_user_ids = allowed_user_ids
+        self.idea_channel_id = idea_channel_id
 
     async def setup_hook(self) -> None:
         await self.backend_client.start()
+        if self.idea_channel_id is None:
+            logger.warning(
+                "DISCORD_IDEA_CHANNEL_ID is not set. "
+                "The bot will only respond to Direct Messages. "
+                "Set DISCORD_IDEA_CHANNEL_ID to also accept ideas from a guild channel."
+            )
 
     async def close(self) -> None:
         await self.backend_client.close()
@@ -35,12 +55,18 @@ class IdeaInboxBot(discord.Client):
         if not self._should_process_message(message):
             return
 
+        if message.author.id not in self.allowed_user_ids:
+            logger.warning(
+                "Blocked message from unauthorized user_id=%s", message.author.id
+            )
+            await message.reply("Sorry, this bot is restricted to approved users.")
+            return
+
         result, error = await submit_idea(
             self.backend_client,
             text=message.content or "",
             user_id=str(message.author.id),
             source="discord",
-            fallback_url=BACKEND_URL,
         )
         if error:
             await message.reply(error)
@@ -48,25 +74,33 @@ class IdeaInboxBot(discord.Client):
 
         await message.reply(format_issue_reply(result, bold_title=True))
 
-    @staticmethod
-    def _should_process_message(message: Message) -> bool:
+    def _should_process_message(self, message: Message) -> bool:
         if isinstance(message.channel, discord.DMChannel):
             return True
-
-        channel = getattr(message, "channel", None)
-        channel_name = getattr(channel, "name", "")
-        return channel_name == "idea-inbox"
+        if self.idea_channel_id is None:
+            return False
+        return message.channel.id == self.idea_channel_id
 
 
 def main() -> None:
     if not DISCORD_BOT_TOKEN:
         raise RuntimeError("DISCORD_BOT_TOKEN is not set in the environment.")
+    if not DISCORD_ALLOWED_USER_IDS:
+        raise RuntimeError(
+            "DISCORD_ALLOWED_USER_IDS is not set in the environment. "
+            "Provide a comma-separated list of Discord user IDs that are allowed to submit ideas."
+        )
 
     intents = discord.Intents.default()
     intents.message_content = True
 
     backend_client = IdeaBackendClient(BACKEND_URL)
-    client = IdeaInboxBot(intents=intents, backend_client=backend_client)
+    client = IdeaInboxBot(
+        intents=intents,
+        backend_client=backend_client,
+        allowed_user_ids=DISCORD_ALLOWED_USER_IDS,
+        idea_channel_id=DISCORD_IDEA_CHANNEL_ID,
+    )
     client.run(DISCORD_BOT_TOKEN)
 
 

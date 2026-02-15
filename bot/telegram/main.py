@@ -38,7 +38,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         text=text,
         user_id=user_id,
         source="telegram",
-        fallback_url=BACKEND_URL,
     )
     if error:
         await update.message.reply_text(error)

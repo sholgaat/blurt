@@ -4,100 +4,82 @@ import asyncio
 import json
 import logging
 from functools import lru_cache
-from typing import Any, Dict, List
+from typing import Any
 
 from google import genai
 from google.genai import types
-import tiktoken
 
 from idea_inbox import settings
 
 LOGGER = logging.getLogger(__name__)
 MODEL_NAME = "gemini-2.5-flash-lite"
 SYSTEM_INSTRUCTION = (
-    "Extract a short descriptive title, a clear concise summary, and 2–7 relevant tags from the user text."
+    "Extract a short descriptive title, a clear concise summary, and 2-7 relevant tags from the user text."
 )
 
-
-def _escape_text(text: str) -> str:
-    """Escape user-provided text for safe JSON embedding."""
-    dumped = json.dumps(text or "")
-    return dumped[1:-1]
+_RESPONSE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "title": {"type": "string"},
+        "summary": {"type": "string"},
+        "tags": {
+            "type": "array",
+            "items": {"type": "string"},
+            "minItems": 1,
+            "maxItems": 7,
+        },
+    },
+    "required": ["title", "summary", "tags"],
+}
 
 
 @lru_cache(maxsize=1)
-def _get_encoding() -> tiktoken.Encoding | None:
-    try:
-        return tiktoken.get_encoding("cl100k_base")
-    except Exception as exc:  # pragma: no cover - defensive logging
-        LOGGER.warning("Failed to initialize tokenizer encoding: %s", exc)
-        return None
-
-
-def _count_tokens(text: str) -> int:
-    if not text:
-        return 0
-    encoding = _get_encoding()
-    if encoding is None:
-        return 0
-    try:
-        return len(encoding.encode(text))
-    except Exception as exc:  # pragma: no cover - defensive logging
-        LOGGER.warning("Failed to count tokens: %s", exc)
-        return 0
+def _get_client() -> genai.Client:
+    api_key = settings.get_gemini_api_key()
+    if not api_key:
+        raise LlmError("GEMINI_API_KEY is not configured.")
+    return genai.Client(api_key=api_key)
 
 
 class LlmError(Exception):
     """Raised when the LLM cleanup process fails."""
 
 
-async def call_ai_cleanup(raw_note: str) -> Dict[str, Any]:
-    """Call Google Gemini to clean up an idea note."""
-    api_key = settings.get_gemini_api_key()
-    if not api_key:
-        raise LlmError("GEMINI_API_KEY is not configured.")
+def ensure_default_tags(tags: list[str]) -> list[str]:
+    """Deduplicate tags and fall back to ['misc'] if empty."""
+    unique = list(dict.fromkeys(tag for tag in tags if tag))
+    return unique or ["misc"]
 
-    client = genai.Client(api_key=api_key)
+
+async def call_ai_cleanup(raw_note: str) -> dict[str, Any]:
+    """Call Google Gemini to clean up an idea note."""
+    client = _get_client()
     config = types.GenerateContentConfig(
         system_instruction=SYSTEM_INSTRUCTION,
         response_mime_type="application/json",
-        response_schema={
-            "type": "object",
-            "properties": {
-                "title": {"type": "string"},
-                "summary": {"type": "string"},
-                "tags": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "minItems": 1,
-                    "maxItems": 7,
-                },
-            },
-            "required": ["title", "summary", "tags"],
-        },
+        response_schema=_RESPONSE_SCHEMA,
     )
-
-    escaped_text = _escape_text(raw_note or "")
-    prompt_tokens = _count_tokens(raw_note)
 
     def _invoke_model() -> Any:
         return client.models.generate_content(
             model=MODEL_NAME,
-            contents=f"TEXT:\n{escaped_text}",
+            contents=f"TEXT:\n{raw_note}",
             config=config,
         )
 
     try:
         response = await asyncio.to_thread(_invoke_model)
         response_text = response.text or ""
-        completion_tokens = _count_tokens(response_text)
-        total_tokens = prompt_tokens + completion_tokens
-        LOGGER.info(
-            "LLM usage - prompt: %s tokens, completion: %s tokens, total: %s tokens",
-            prompt_tokens,
-            completion_tokens,
-            total_tokens,
-        )
+
+        usage = getattr(response, "usage_metadata", None)
+        if usage:
+            LOGGER.info(
+                "LLM usage - prompt: %s tokens, completion: %s tokens, total: %s tokens",
+                getattr(usage, "prompt_token_count", "?"),
+                getattr(usage, "candidates_token_count", "?"),
+                getattr(usage, "total_token_count", "?"),
+            )
+
         parsed = json.loads(response_text or "{}")
     except Exception as exc:
         LOGGER.exception("Gemini client call failed: %s", exc)
@@ -107,11 +89,10 @@ async def call_ai_cleanup(raw_note: str) -> Dict[str, Any]:
     summary = str(parsed.get("summary", "") or "")
     tags_value = parsed.get("tags") or []
     if isinstance(tags_value, list):
-        tags: List[str] = [str(tag).lower() for tag in tags_value if tag]
+        tags = [str(tag).lower() for tag in tags_value if tag]
     else:
         tags = []
 
-    if not tags:
-        tags = ["misc"]
+    tags = ensure_default_tags(tags)
 
     return {"title": title, "summary": summary, "tags": tags}

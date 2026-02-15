@@ -9,6 +9,15 @@ from idea_inbox import settings
 
 logger = logging.getLogger(__name__)
 
+_http_client: httpx.AsyncClient | None = None
+
+
+def _get_http_client() -> httpx.AsyncClient:
+    global _http_client
+    if _http_client is None:
+        _http_client = httpx.AsyncClient()
+    return _http_client
+
 
 def _build_issue_body(
     summary: str,
@@ -47,8 +56,8 @@ def _prepare_labels(
 ) -> list[str]:
     labels = list(dict.fromkeys(tags or []))
     source = (metadata or {}).get("source", "")
-    if isinstance(source, str) and source.lower() == "discord":
-        source_label = "source:discord"
+    if isinstance(source, str) and source.strip():
+        source_label = f"source:{source.strip().lower()}"
         if source_label not in labels:
             labels.append(source_label)
     return labels
@@ -83,10 +92,10 @@ async def create_issue(
     if dry_run:
         logger.info("Dry run enabled - not creating GitHub issue.")
         logger.info("Issue payload: %s", payload)
-        return "example.com/dry-run-issue"
+        return "https://example.com/dry-run-issue"
 
-    async with httpx.AsyncClient() as client:
-        response = await client.post(url, json=payload, headers=headers, timeout=20.0)
+    client = _get_http_client()
+    response = await client.post(url, json=payload, headers=headers, timeout=20.0)
 
     if response.status_code >= 300:
         logger.error(

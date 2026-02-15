@@ -6,6 +6,10 @@ services:
     restart: unless-stopped
     env_file:
       - .env.backend
+    # No ports published intentionally: the backend is only reachable from
+    # within the Docker Compose network (http://backend:8000). The bot
+    # container reaches it via the service name. This keeps the API
+    # internal-only without needing a firewall rule.
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || curl -fsS http://localhost:8000/ || exit 1"]
       interval: 30s

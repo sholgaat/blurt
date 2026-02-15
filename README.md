@@ -4,26 +4,20 @@ A tool to capture ideas from chat, use Gemini to clean them up, and create GitHu
 ## Quickstart (60 Seconds)
 
 ```bash
-# 1) Create service env files
-cp .env.backend.example .env.backend
-cp .env.bot.example .env.bot
+# 1) Run the interactive setup script
+./scripts/setup.sh
 
-# 2) Fill required values
-# - .env.backend: GEMINI_API_KEY, GITHUB_TOKEN, GITHUB_REPO_OWNER, GITHUB_REPO_NAME
-# - .env.bot: BOT_PROVIDER + bot token(s)
-
-# 3) Safe first run (no real GitHub issues)
-echo "DRY_RUN=true" >> .env.backend
-
-# 4) Start
+# 2) Start
 docker compose up -d --build
 
-# 5) Watch logs
+# 3) Watch logs
 docker compose logs -f backend
 docker compose logs -f bot
 ```
 
-In Docker Compose, backend is internal-only (`http://backend:8000`) and not exposed to host port `8000`.
+The setup script copies the example env files, prompts for every required value with a short explanation, and writes them in place. It defaults `DRY_RUN=true` so no real GitHub issues are created on the first run.
+
+In Docker Compose, the backend is internal-only (`http://backend:8000`) and not exposed to the host. See the comment in `docker-compose.yml` for details.
 
 ## Setup
 
@@ -33,7 +27,13 @@ In Docker Compose, backend is internal-only (`http://backend:8000`) and not expo
 
 ### 1. Create service env files
 
-Copy the service-specific environment templates:
+Either run the interactive script (recommended):
+
+```bash
+./scripts/setup.sh
+```
+
+Or copy the templates manually and fill them in:
 
 ```bash
 cp .env.backend.example .env.backend
@@ -51,19 +51,60 @@ GITHUB_REPO_NAME=your_repository_name
 # Required for backend LLM features
 GEMINI_API_KEY=your_gemini_api_key
 
-# Optional: Set to "true" to test without creating actual GitHub issues
-DRY_RUN=false
+# Optional: Set to "false" once you have verified your setup works
+DRY_RUN=true
 ```
 
 ### 3. Configure bot runtime (`.env.bot`)
 
 ```bash
-BOT_PROVIDER=discord
+BOT_PROVIDER=telegram
+
+# Discord
 DISCORD_BOT_TOKEN=your_discord_bot_token_here
+DISCORD_ALLOWED_USER_IDS=123456789
+DISCORD_IDEA_CHANNEL_ID=
+
+# Telegram
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
 TELEGRAM_ALLOWED_USER_IDS=123456789
+
 BACKEND_URL=http://backend:8000
 ```
+
+## Configuration Reference
+
+### Backend (`.env.backend`)
+
+| Variable | Required | Description |
+|---|---|---|
+| `GEMINI_API_KEY` | Yes | API key for Google Gemini, used to structure ideas into title/summary/tags. Get one at [Google AI Studio](https://aistudio.google.com/). |
+| `GITHUB_TOKEN` | Yes | GitHub Personal Access Token used to create issues. Classic token needs `repo` scope. Fine-grained token needs Issues (read/write) and Labels (read/write) on the target repo. |
+| `GITHUB_REPO_OWNER` | Yes | GitHub username or organisation that owns the target repository. |
+| `GITHUB_REPO_NAME` | Yes | Repository name where ideas will be filed as issues. |
+| `DRY_RUN` | No | Set to `true` (default) to skip real issue creation. Set to `false` when ready for production. |
+
+### Bot runtime (`.env.bot`)
+
+| Variable | Required | Description |
+|---|---|---|
+| `BOT_PROVIDER` | Yes | Which bot to run: `telegram` or `discord`. |
+| `BACKEND_URL` | No | URL the bot uses to reach the backend. Default (`http://backend:8000`) is correct for Docker Compose. Change to `http://localhost:8000` for direct runs. |
+
+#### Discord variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `DISCORD_BOT_TOKEN` | Yes (Discord) | Token for your Discord bot application. Create one at [Discord Developer Portal](https://discord.com/developers/applications). The bot needs the **Message Content** privileged intent enabled (Bot > Privileged Gateway Intents) and permissions to read and send messages. |
+| `DISCORD_ALLOWED_USER_IDS` | Yes (Discord) | Comma-separated numeric Discord user IDs that are permitted to submit ideas. Find a user ID by enabling Developer Mode in Discord (Settings > Advanced), then right-clicking a user and choosing "Copy User ID". |
+| `DISCORD_IDEA_CHANNEL_ID` | No | Numeric ID of a guild channel where the bot should also accept ideas. If unset, the bot only responds to Direct Messages. Right-click the channel and choose "Copy Channel ID" (requires Developer Mode). |
+
+#### Telegram variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `TELEGRAM_BOT_TOKEN` | Yes (Telegram) | Token for your Telegram bot. Create a bot and get the token via [@BotFather](https://t.me/botfather). |
+| `TELEGRAM_ALLOWED_USER_IDS` | Yes (Telegram) | Comma-separated numeric Telegram user IDs that are permitted to submit ideas. Find your ID by messaging [@userinfobot](https://t.me/userinfobot). |
 
 ## Running the Application
 
@@ -165,8 +206,8 @@ python -m bot.main
 
 #### Provider notes
 
-- Discord mode listens for DMs and messages in channels named `#idea-inbox`.
-- Telegram mode processes only `TELEGRAM_ALLOWED_USER_IDS` (comma-separated IDs).
+- Discord mode responds to Direct Messages and, if `DISCORD_IDEA_CHANNEL_ID` is set, to messages in that guild channel.
+- Telegram mode processes only users in `TELEGRAM_ALLOWED_USER_IDS`.
 - Diagram: see `docs/flow.md`.
 
 ## Testing
@@ -183,3 +224,4 @@ python -m pytest
 - **Bot runtime** (`bot/main.py`): provider switch (`discord` or `telegram`) based on `BOT_PROVIDER`
 - **Discord bot** (`bot/discord/`): Discord client that forwards messages to the backend
 - **Telegram bot** (`bot/telegram/`): Telegram client that forwards messages to the backend
+

@@ -27,7 +27,6 @@ async def test_submit_idea_success():
         text="text",
         user_id="1",
         source="discord",
-        fallback_url="http://fallback",
     )
     assert error is None
     assert result and result.title == "Hello" and result.url == "http://example.com"
@@ -38,7 +37,7 @@ async def test_submit_idea_success():
 async def test_submit_idea_backend_connection_error():
     backend = DummyBackend(BackendConnectionError("down"))
     result, error = await submit_idea(
-        backend, text="text", user_id="1", source="discord", fallback_url="http://fallback"
+        backend, text="text", user_id="1", source="discord"
     )
     assert result is None
     assert "reach the backend" in error
@@ -48,10 +47,20 @@ async def test_submit_idea_backend_connection_error():
 async def test_submit_idea_backend_response_error():
     backend = DummyBackend(BackendResponseError("bad response"))
     result, error = await submit_idea(
-        backend, text="text", user_id="1", source="discord", fallback_url="http://fallback"
+        backend, text="text", user_id="1", source="discord"
     )
     assert result is None
     assert "log that idea" in error
+
+
+@pytest.mark.asyncio
+async def test_submit_idea_missing_url_uses_placeholder():
+    backend = DummyBackend({"title": "Hello"})
+    result, error = await submit_idea(
+        backend, text="text", user_id="1", source="discord"
+    )
+    assert error is None
+    assert result and result.url == "(no URL returned)"
 
 
 def test_format_issue_reply_bold():

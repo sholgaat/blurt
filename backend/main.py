@@ -2,24 +2,25 @@ from __future__ import annotations
 
 import logging
 from typing import Optional
-from uuid import uuid4
 
-from fastapi import Body, FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from backend.tagging import ensure_default_tag
 from backend.github_client import create_issue
-from backend.llm import LlmError, call_ai_cleanup
+from backend.llm import LlmError, call_ai_cleanup, ensure_default_tags
 
-# Basic logger for the backend module
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Idea Inbox Backend", version="0.0.1")
 
+MAX_IDEA_LENGTH = 4096
+
 
 class IdeaRequest(BaseModel):
-    text: str = Field(..., description="Raw idea text from the user")
+    text: str = Field(
+        ..., description="Raw idea text from the user", min_length=1, max_length=MAX_IDEA_LENGTH
+    )
     user_id: Optional[str] = Field(
         None, description="User identifier if available from the source"
     )
@@ -41,16 +42,15 @@ def health() -> dict[str, str]:
 
 
 @app.post("/ideas", response_model=IdeaResponse)
-async def create_idea(payload: IdeaRequest = Body(...)) -> IdeaResponse:
+async def create_idea(payload: IdeaRequest) -> IdeaResponse:
     logger.info(
         "Creating idea (user=%s, source=%s)",
         payload.user_id,
-        payload.source
+        payload.source,
     )
-    raw_text = payload.text or ""
 
     try:
-        llm_result = await call_ai_cleanup(raw_text)
+        llm_result = await call_ai_cleanup(payload.text)
     except LlmError as exc:
         logger.error("LLM cleanup failed; returning error: %s", exc)
         raise HTTPException(
@@ -60,8 +60,7 @@ async def create_idea(payload: IdeaRequest = Body(...)) -> IdeaResponse:
 
     title = llm_result.get("title") or ""
     summary = llm_result.get("summary") or ""
-    tags = ensure_default_tag(llm_result.get("tags") or [])
-    idea_id = uuid4().hex[:10]
+    tags = ensure_default_tags(llm_result.get("tags") or [])
     metadata = {"source": payload.source, "user_id": payload.user_id}
 
     try:
@@ -80,8 +79,7 @@ async def create_idea(payload: IdeaRequest = Body(...)) -> IdeaResponse:
         ) from exc
 
     logger.info(
-        "Created idea response (id=%s, title=%s, tags=%s, url=%s)",
-        idea_id,
+        "Created idea (title=%s, tags=%s, url=%s)",
         title,
         tags,
         issue_url,

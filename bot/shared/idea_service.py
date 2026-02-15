@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Tuple
 
 from bot.shared.backend_client import (
     BackendConnectionError,
@@ -26,8 +25,7 @@ async def submit_idea(
     text: str,
     user_id: str,
     source: str,
-    fallback_url: str,
-) -> Tuple[IdeaSubmissionResult | None, str | None]:
+) -> tuple[IdeaSubmissionResult | None, str | None]:
     try:
         data = await backend_client.create_idea(text=text, user_id=user_id, source=source)
     except BackendConnectionError:
@@ -36,7 +34,7 @@ async def submit_idea(
         return None, BACKEND_ERROR_MSG
 
     title = data.get("title", "Untitled")
-    url = data.get("url", fallback_url)
+    url = data.get("url", "(no URL returned)")
     return IdeaSubmissionResult(title=title, url=url), None
 
 
