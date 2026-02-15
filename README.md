@@ -9,24 +9,16 @@ A tool to capture ideas from chat, use Gemini to clean them up, and create GitHu
 
 ### 1. Configure Environment Variables
 
-Copy the example environment file and fill in your credentials:
+Copy the service-specific environment templates:
 
 ```bash
-cp .env.example .env
+cp .env.backend.example .env.backend
+cp .env.bot.example .env.bot
 ```
 
-Edit `.env` with your configuration:
+Edit `.env.backend` with backend credentials:
 
 ```bash
-# Required for Discord bot
-DISCORD_BOT_TOKEN=your_discord_bot_token_here
-
-# Required for Telegram bot
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
-
-# Backend URL optional (defaults to http://localhost:8000)
-BACKEND_URL=http://localhost:8000
-
 # Required for backend GitHub integration
 GITHUB_TOKEN=your_github_personal_access_token
 GITHUB_REPO_OWNER=your_github_username
@@ -37,6 +29,16 @@ GEMINI_API_KEY=your_gemini_api_key
 
 # Optional: Set to "true" to test without creating actual GitHub issues
 DRY_RUN=false
+```
+
+Edit `.env.bot` with bot-only runtime values:
+
+```bash
+BOT_PROVIDER=discord
+DISCORD_BOT_TOKEN=your_discord_bot_token_here
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
+TELEGRAM_ALLOWED_USER_IDS=123456789
+BACKEND_URL=http://backend:8000
 ```
 
 ## Running the Application

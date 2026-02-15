@@ -5,7 +5,7 @@ services:
       dockerfile: backend/Dockerfile
     restart: unless-stopped
     env_file:
-      - .env
+      - .env.backend
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || curl -fsS http://localhost:8000/ || exit 1"]
       interval: 30s
@@ -19,15 +19,7 @@ services:
       dockerfile: bot/Dockerfile
     restart: unless-stopped
     env_file:
-      - .env
-    environment:
-      BOT_PROVIDER: ${BOT_PROVIDER}
-      BOT_TOKEN: ${BOT_TOKEN}
-      GEMINI_API_KEY: ${GEMINI_API_KEY}
-      GITHUB_TOKEN: ${GITHUB_TOKEN}
-      GITHUB_REPO_OWNER: ${GITHUB_REPO_OWNER}
-      GITHUB_REPO_NAME: ${GITHUB_REPO_NAME}
-      BACKEND_URL: ${BACKEND_URL:-http://backend:8000}
+      - .env.bot
     depends_on:
       backend:
         condition: service_healthy
