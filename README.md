@@ -99,6 +99,26 @@ Stop services:
 docker compose down
 ```
 
+### Optional: One-step deploy to GCP VM
+
+If you want a low-manual cloud setup, use the deploy script:
+
+```bash
+./scripts/deploy_gcp.sh
+```
+
+What it does:
+- prompts for required config/secrets (`GEMINI_API_KEY`, GitHub, Discord/Telegram),
+- creates or reuses a GCE VM,
+- installs Docker + Compose on the VM,
+- uploads this repo and writes `.env.backend` / `.env.bot`,
+- runs `docker compose up -d --build` remotely.
+
+Prerequisites for script:
+- `gcloud` CLI installed locally
+- an authenticated account (`gcloud auth login`)
+- project access with permission to create/modify Compute Engine resources
+
 Health check from inside the backend container:
 
 ```bash
