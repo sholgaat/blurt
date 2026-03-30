@@ -208,7 +208,6 @@ python -m bot.main
 
 - Discord mode responds to Direct Messages and, if `DISCORD_IDEA_CHANNEL_ID` is set, to messages in that guild channel.
 - Telegram mode processes only users in `TELEGRAM_ALLOWED_USER_IDS`.
-- Diagram: see `docs/flow.md`.
 
 ## Testing
 
