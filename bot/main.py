@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import os
+from bot.settings import get_bot_settings
 
 
 def main() -> None:
-    provider = os.getenv("BOT_PROVIDER", "telegram").strip().lower()
+    provider = get_bot_settings().bot_provider.strip().lower()
 
     if provider == "telegram":
         from bot.telegram.main import main as telegram_main

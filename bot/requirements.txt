@@ -1,4 +1,5 @@
 httpx
+pydantic-settings
 discord.py
 python-telegram-bot
 python-dotenv

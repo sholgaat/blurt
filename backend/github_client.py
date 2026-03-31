@@ -1,29 +1,23 @@
 from __future__ import annotations
 
 import logging
-from typing import Iterable, Mapping, Optional
+from collections.abc import Iterable, Mapping
 
 import httpx
 
-from idea_inbox import settings
+from backend.settings import get_backend_settings
 
 logger = logging.getLogger(__name__)
 
-_http_client: httpx.AsyncClient | None = None
-
-
-def _get_http_client() -> httpx.AsyncClient:
-    global _http_client
-    if _http_client is None:
-        _http_client = httpx.AsyncClient()
-    return _http_client
+# Managed via FastAPI lifespan in backend.main.
+http_client: httpx.AsyncClient | None = None
 
 
 def _build_issue_body(
     summary: str,
     tags: Iterable[str],
     original_text: str,
-    metadata: Optional[Mapping[str, Optional[str]]] = None,
+    metadata: Mapping[str, str | None] | None = None,
 ) -> str:
     quoted = "\n".join(f"> {line}" for line in (original_text or "").splitlines()) or "> (empty)"
 
@@ -52,7 +46,7 @@ def _build_issue_body(
 
 
 def _prepare_labels(
-    tags: Iterable[str], metadata: Optional[Mapping[str, Optional[str]]]
+    tags: Iterable[str], metadata: Mapping[str, str | None] | None
 ) -> list[str]:
     labels = list(dict.fromkeys(tags or []))
     source = (metadata or {}).get("source", "")
@@ -68,12 +62,18 @@ async def create_issue(
     summary: str,
     tags: list[str],
     original_text: str,
-    metadata: Optional[Mapping[str, Optional[str]]] = None,
+    metadata: Mapping[str, str | None] | None = None,
 ) -> str:
-    owner = settings.require_env("GITHUB_REPO_OWNER")
-    repo = settings.require_env("GITHUB_REPO_NAME")
-    token = settings.require_env("GITHUB_TOKEN")
-    dry_run = settings.is_dry_run_enabled()
+    cfg = get_backend_settings()
+    owner = cfg.github_repo_owner
+    repo = cfg.github_repo_name
+    token = cfg.github_token
+    dry_run = cfg.dry_run
+
+    if not owner or not repo or not token:
+        raise RuntimeError(
+            "GITHUB_REPO_OWNER, GITHUB_REPO_NAME, and GITHUB_TOKEN must all be set."
+        )
 
     issue_body = _build_issue_body(summary, tags, original_text, metadata)
     url = f"https://api.github.com/repos/{owner}/{repo}/issues"
@@ -94,16 +94,20 @@ async def create_issue(
         logger.info("Issue payload: %s", payload)
         return "https://example.com/dry-run-issue"
 
-    client = _get_http_client()
-    response = await client.post(url, json=payload, headers=headers, timeout=20.0)
+    if http_client is None:
+        raise RuntimeError("GitHub HTTP client not initialized. Is the app lifespan running?")
 
-    if response.status_code >= 300:
+    response = await http_client.post(url, json=payload, headers=headers, timeout=20.0)
+
+    try:
+        response.raise_for_status()
+    except httpx.HTTPStatusError:
         logger.error(
             "Failed to create GitHub issue (status=%s, body=%s)",
             response.status_code,
             response.text,
         )
-        response.raise_for_status()
+        raise
 
     data = response.json()
     issue_url = data.get("html_url")

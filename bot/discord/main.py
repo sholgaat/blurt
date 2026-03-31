@@ -5,14 +5,9 @@ import logging
 import discord
 from discord import Message
 
-from bot.config import (
-    BACKEND_URL,
-    DISCORD_ALLOWED_USER_IDS,
-    DISCORD_BOT_TOKEN,
-    DISCORD_IDEA_CHANNEL_ID,
-)
 from bot.shared.backend_client import IdeaBackendClient
 from bot.shared.idea_service import format_issue_reply, submit_idea
+from bot.settings import get_bot_settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -83,9 +78,11 @@ class IdeaInboxBot(discord.Client):
 
 
 def main() -> None:
-    if not DISCORD_BOT_TOKEN:
+    cfg = get_bot_settings()
+
+    if not cfg.discord_bot_token:
         raise RuntimeError("DISCORD_BOT_TOKEN is not set in the environment.")
-    if not DISCORD_ALLOWED_USER_IDS:
+    if not cfg.discord_allowed_user_ids:
         raise RuntimeError(
             "DISCORD_ALLOWED_USER_IDS is not set in the environment. "
             "Provide a comma-separated list of Discord user IDs that are allowed to submit ideas."
@@ -94,14 +91,14 @@ def main() -> None:
     intents = discord.Intents.default()
     intents.message_content = True
 
-    backend_client = IdeaBackendClient(BACKEND_URL)
+    backend_client = IdeaBackendClient(cfg.backend_url)
     client = IdeaInboxBot(
         intents=intents,
         backend_client=backend_client,
-        allowed_user_ids=DISCORD_ALLOWED_USER_IDS,
-        idea_channel_id=DISCORD_IDEA_CHANNEL_ID,
+        allowed_user_ids=cfg.discord_allowed_user_ids,
+        idea_channel_id=cfg.discord_idea_channel_id,
     )
-    client.run(DISCORD_BOT_TOKEN)
+    client.run(cfg.discord_bot_token)
 
 
 if __name__ == "__main__":

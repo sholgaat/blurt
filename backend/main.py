@@ -1,27 +1,42 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+from backend import github_client
 from backend.github_client import create_issue
-from backend.llm import LlmError, call_ai_cleanup, ensure_default_tags
+from backend.llm import LlmError, call_ai_cleanup
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Idea Inbox Backend", version="0.0.1")
-
 MAX_IDEA_LENGTH = 4096
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    github_client.http_client = httpx.AsyncClient()
+    try:
+        yield
+    finally:
+        if github_client.http_client:
+            await github_client.http_client.aclose()
+            github_client.http_client = None
+
+
+app = FastAPI(title="Idea Inbox Backend", version="0.0.1", lifespan=lifespan)
 
 
 class IdeaRequest(BaseModel):
     text: str = Field(
         ..., description="Raw idea text from the user", min_length=1, max_length=MAX_IDEA_LENGTH
     )
-    user_id: Optional[str] = Field(
+    user_id: str | None = Field(
         None, description="User identifier if available from the source"
     )
     source: str = Field(
@@ -42,7 +57,7 @@ def health() -> dict[str, str]:
 
 
 @app.post("/ideas", response_model=IdeaResponse)
-async def create_idea(payload: IdeaRequest) -> IdeaResponse:
+async def create_idea_endpoint(payload: IdeaRequest) -> IdeaResponse:
     logger.info(
         "Creating idea (user=%s, source=%s)",
         payload.user_id,
@@ -58,9 +73,9 @@ async def create_idea(payload: IdeaRequest) -> IdeaResponse:
             detail="Idea processing is temporarily unavailable. Please try again later.",
         ) from exc
 
-    title = llm_result.get("title") or ""
-    summary = llm_result.get("summary") or ""
-    tags = ensure_default_tags(llm_result.get("tags") or [])
+    title = llm_result["title"]
+    summary = llm_result["summary"]
+    tags = llm_result["tags"]
     metadata = {"source": payload.source, "user_id": payload.user_id}
 
     try:

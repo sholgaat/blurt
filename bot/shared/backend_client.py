@@ -40,7 +40,9 @@ class IdeaBackendClient:
         except httpx.HTTPError as exc:  # pragma: no cover - network errors
             raise BackendConnectionError("Failed to reach backend.") from exc
 
-        if response.status_code != 200:
-            raise BackendResponseError("Backend returned an error status.")
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise BackendResponseError("Backend returned an error status.") from exc
 
         return response.json()

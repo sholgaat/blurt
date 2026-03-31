@@ -7,6 +7,8 @@ from bot.shared.backend_client import (
     IdeaBackendClient,
 )
 
+_FAKE_REQUEST = httpx.Request("POST", "http://example.com/ideas")
+
 
 @pytest.mark.asyncio
 async def test_create_idea_success(monkeypatch):
@@ -15,7 +17,7 @@ async def test_create_idea_success(monkeypatch):
     async def fake_post(path, json, timeout):
         assert path == "/ideas"
         assert json["text"] == "hello"
-        return httpx.Response(200, json={"title": "T"})
+        return httpx.Response(200, json={"title": "T"}, request=_FAKE_REQUEST)
 
     backend.http_client = httpx.AsyncClient(base_url=backend.base_url)
     monkeypatch.setattr(backend.http_client, "post", fake_post)
@@ -47,7 +49,7 @@ async def test_create_idea_raises_response_error(monkeypatch):
     backend = IdeaBackendClient("http://example.com")
 
     async def fake_post(*args, **kwargs):
-        return httpx.Response(500, json={"error": "nope"})
+        return httpx.Response(500, json={"error": "nope"}, request=_FAKE_REQUEST)
 
     backend.http_client = httpx.AsyncClient(base_url=backend.base_url)
     monkeypatch.setattr(backend.http_client, "post", fake_post)

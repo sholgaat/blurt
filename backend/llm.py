@@ -4,12 +4,12 @@ import asyncio
 import json
 import logging
 from functools import lru_cache
-from typing import Any
+from typing import TypedDict
 
 from google import genai
 from google.genai import types
 
-from idea_inbox import settings
+from backend.settings import get_backend_settings
 
 LOGGER = logging.getLogger(__name__)
 MODEL_NAME = "gemini-2.5-flash-lite"
@@ -33,9 +33,16 @@ _RESPONSE_SCHEMA = {
 }
 
 
+class CleanedIdea(TypedDict):
+    """Structure returned by LLM cleanup."""
+    title: str
+    summary: str
+    tags: list[str]
+
+
 @lru_cache(maxsize=1)
 def _get_client() -> genai.Client:
-    api_key = settings.get_gemini_api_key()
+    api_key = get_backend_settings().gemini_api_key
     if not api_key:
         raise LlmError("GEMINI_API_KEY is not configured.")
     return genai.Client(api_key=api_key)
@@ -51,7 +58,7 @@ def ensure_default_tags(tags: list[str]) -> list[str]:
     return unique or ["misc"]
 
 
-async def call_ai_cleanup(raw_note: str) -> dict[str, Any]:
+async def call_ai_cleanup(raw_note: str) -> CleanedIdea:
     """Call Google Gemini to clean up an idea note."""
     client = _get_client()
     config = types.GenerateContentConfig(
@@ -60,7 +67,7 @@ async def call_ai_cleanup(raw_note: str) -> dict[str, Any]:
         response_schema=_RESPONSE_SCHEMA,
     )
 
-    def _invoke_model() -> Any:
+    def _invoke_model() -> types.GenerateContentResponse:
         return client.models.generate_content(
             model=MODEL_NAME,
             contents=f"TEXT:\n{raw_note}",

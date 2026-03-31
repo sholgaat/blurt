@@ -5,17 +5,17 @@ import discord
 import pytest
 
 from bot.discord.main import IdeaInboxBot
-from bot.shared.backend_client import (
-    BackendConnectionError,
-    BackendResponseError,
-    IdeaBackendClient,
+from bot.shared.backend_client import IdeaBackendClient
+from tests.conftest import (
+    DummyBackend,
+    BackendRaisesConnectionError,
+    BackendRaisesResponseError,
 )
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
-_TEST_BACKEND_URL = "http://example.com"
 _ALLOWED_USER_ID = 111
 _OTHER_USER_ID = 999
 _IDEA_CHANNEL_ID = 42
@@ -24,37 +24,6 @@ _IDEA_CHANNEL_ID = 42
 # ---------------------------------------------------------------------------
 # Mock helpers
 # ---------------------------------------------------------------------------
-
-
-class BaseMockBackend(IdeaBackendClient):
-    def __init__(self):
-        super().__init__(base_url=_TEST_BACKEND_URL)
-
-    async def start(self) -> None:  # pragma: no cover
-        pass
-
-    async def close(self) -> None:  # pragma: no cover
-        pass
-
-
-class DummyBackend(BaseMockBackend):
-    def __init__(self):
-        super().__init__()
-        self.called_with: tuple | None = None
-
-    async def create_idea(self, text: str, user_id: str, source: str) -> dict:
-        self.called_with = (text, user_id, source)
-        return {"title": "Test Idea", "url": "http://example.com/issue/1"}
-
-
-class BackendRaisesConnectionError(BaseMockBackend):
-    async def create_idea(self, text: str, user_id: str, source: str) -> dict:
-        raise BackendConnectionError("unreachable")
-
-
-class BackendRaisesResponseError(BaseMockBackend):
-    async def create_idea(self, text: str, user_id: str, source: str) -> dict:
-        raise BackendResponseError("bad response")
 
 
 def _make_bot(
@@ -142,7 +111,7 @@ async def test_dm_from_allowed_user_is_processed():
     message.reply.assert_awaited_once()
     reply_text = message.reply.call_args[0][0]
     assert "Test Idea" in reply_text
-    assert "http://example.com/issue/1" in reply_text
+    assert "http://example.com/idea" in reply_text
 
 
 # ---------------------------------------------------------------------------
@@ -175,7 +144,7 @@ async def test_bot_ignores_own_messages():
     bot = _make_bot(backend)
     message, author = _make_dm_message(author_id=_ALLOWED_USER_ID)
 
-    # bot.user IS the author → should be ignored
+    # bot.user IS the author -> should be ignored
     with _patch_bot_user(bot, author):
         await bot.on_message(message)
 
