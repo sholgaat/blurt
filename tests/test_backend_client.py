@@ -67,3 +67,27 @@ async def test_start_and_close_create_http_client():
     assert backend.http_client is not None
     await backend.close()
     assert backend.http_client is None
+
+
+@pytest.mark.asyncio
+async def test_create_idea_auto_starts_client(monkeypatch):
+    backend = IdeaBackendClient("http://example.com")
+    assert backend.http_client is None
+
+    async def fake_post(path, json, timeout):
+        return httpx.Response(200, json={"title": "T"}, request=_FAKE_REQUEST)
+
+    # Patch start to create client, then patch the client's post method
+    original_start = backend.start
+
+    async def patched_start():
+        await original_start()
+        monkeypatch.setattr(backend.http_client, "post", fake_post)
+
+    monkeypatch.setattr(backend, "start", patched_start)
+
+    result = await backend.create_idea("hello", "u1", "telegram")
+    assert result == {"title": "T"}
+    assert backend.http_client is not None
+
+    await backend.close()

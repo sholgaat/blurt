@@ -9,7 +9,6 @@ from backend.settings import get_backend_settings
 
 logger = logging.getLogger(__name__)
 
-# Managed via FastAPI lifespan in backend.main.
 http_client: httpx.AsyncClient | None = None
 
 

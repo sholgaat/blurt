@@ -31,7 +31,7 @@ class IdeaBackendClient:
 
     async def create_idea(self, text: str, user_id: str, source: str) -> dict:
         if not self.http_client:
-            raise BackendConnectionError("HTTP client not initialized.")
+            await self.start()
 
         payload = {"text": text, "user_id": user_id, "source": source}
 

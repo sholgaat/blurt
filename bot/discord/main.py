@@ -41,7 +41,7 @@ class IdeaInboxBot(discord.Client):
         await super().close()
 
     async def on_ready(self) -> None:
-        logger.info("Discord bot is running...")
+        logger.info("Discord bot is running... try sending it a message to see it in action!")
 
     async def on_message(self, message: Message) -> None:
         if message.author == self.user:
@@ -52,7 +52,7 @@ class IdeaInboxBot(discord.Client):
 
         if message.author.id not in self.allowed_user_ids:
             logger.warning(
-                "Blocked message from unauthorized user_id=%s", message.author.id
+                "Blocked message from unauthorized {user_id=%s, username=%s}", message.author.id, message.author.name
             )
             await message.reply("Sorry, this bot is restricted to approved users.")
             return
