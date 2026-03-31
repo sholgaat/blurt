@@ -3,15 +3,11 @@ from __future__ import annotations
 import httpx
 
 
-class BackendClientError(Exception):
-    """Base exception for backend client errors."""
-
-
-class BackendConnectionError(BackendClientError):
+class BackendConnectionError(Exception):
     """Raised when the backend cannot be reached."""
 
 
-class BackendResponseError(BackendClientError):
+class BackendResponseError(Exception):
     """Raised when the backend responds with an error status."""
 
 

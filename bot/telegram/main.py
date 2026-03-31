@@ -7,7 +7,7 @@ from telegram import Update
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
 
 from bot.shared.backend_client import IdeaBackendClient
-from bot.shared.idea_service import format_issue_reply, submit_idea
+from bot.shared.idea_service import submit_idea
 from bot.settings import get_bot_settings
 
 logging.basicConfig(level=logging.INFO)
@@ -32,17 +32,13 @@ async def handle_message(
         await update.message.reply_text("Sorry, this bot is restricted to approved users.")
         return
 
-    result, error = await submit_idea(
+    reply = await submit_idea(
         backend_client,
         text=text,
         user_id=user_id,
         source="telegram",
     )
-    if error:
-        await update.message.reply_text(error)
-        return
-
-    await update.message.reply_text(format_issue_reply(result))
+    await update.message.reply_text(reply)
 
 
 def main() -> None:
@@ -50,6 +46,11 @@ def main() -> None:
 
     if not cfg.telegram_bot_token:
         raise RuntimeError("TELEGRAM_BOT_TOKEN is not set in the environment.")
+    if not cfg.telegram_allowed_user_ids:
+        raise RuntimeError(
+            "TELEGRAM_ALLOWED_USER_IDS is not set in the environment. "
+            "Provide a comma-separated list of Telegram user IDs that are allowed to submit ideas."
+        )
 
     backend_client = IdeaBackendClient(cfg.backend_url)
 

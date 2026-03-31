@@ -6,7 +6,7 @@ import discord
 from discord import Message
 
 from bot.shared.backend_client import IdeaBackendClient
-from bot.shared.idea_service import format_issue_reply, submit_idea
+from bot.shared.idea_service import submit_idea
 from bot.settings import get_bot_settings
 
 logging.basicConfig(level=logging.INFO)
@@ -57,17 +57,13 @@ class IdeaInboxBot(discord.Client):
             await message.reply("Sorry, this bot is restricted to approved users.")
             return
 
-        result, error = await submit_idea(
+        reply = await submit_idea(
             self.backend_client,
             text=message.content or "",
             user_id=str(message.author.id),
             source="discord",
         )
-        if error:
-            await message.reply(error)
-            return
-
-        await message.reply(format_issue_reply(result, bold_title=True))
+        await message.reply(reply)
 
     def _should_process_message(self, message: Message) -> bool:
         if isinstance(message.channel, discord.DMChannel):

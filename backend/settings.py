@@ -9,7 +9,7 @@ class BackendSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env.backend",
         env_file_encoding="utf-8",
-        extra="forbid",
+        extra="ignore",
     )
 
     github_token: str = ""

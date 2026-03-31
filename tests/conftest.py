@@ -8,41 +8,28 @@ from bot.shared.backend_client import (
 
 TEST_BACKEND_URL = "http://example.com"
 
+SUCCESS_RESPONSE = {"title": "Test Idea", "url": "http://example.com/idea"}
 
-class BaseMockBackend(IdeaBackendClient):
-    """Base class for mock backend implementations used across bot tests."""
 
-    def __init__(self):
+class FakeBackend(IdeaBackendClient):
+    """Configurable mock backend for tests.
+
+    Pass a dict for a success response, or an Exception instance to raise.
+    """
+
+    def __init__(self, response: dict | Exception | None = None):
         super().__init__(base_url=TEST_BACKEND_URL)
-
-    async def start(self) -> None:  # pragma: no cover - no-op for tests
-        pass
-
-    async def close(self) -> None:  # pragma: no cover - no-op for tests
-        pass
-
-
-class DummyBackend(BaseMockBackend):
-    """Mock backend that returns a canned success response."""
-
-    def __init__(self):
-        super().__init__()
+        self.response: dict | Exception = response if response is not None else SUCCESS_RESPONSE
         self.called_with: tuple | None = None
+
+    async def start(self) -> None:
+        pass
+
+    async def close(self) -> None:
+        pass
 
     async def create_idea(self, text: str, user_id: str, source: str) -> dict:
         self.called_with = (text, user_id, source)
-        return {"title": "Test Idea", "url": "http://example.com/idea"}
-
-
-class BackendRaisesConnectionError(BaseMockBackend):
-    """Mock backend that raises BackendConnectionError."""
-
-    async def create_idea(self, text: str, user_id: str, source: str) -> dict:
-        raise BackendConnectionError("Failed to reach backend.")
-
-
-class BackendRaisesResponseError(BaseMockBackend):
-    """Mock backend that raises BackendResponseError."""
-
-    async def create_idea(self, text: str, user_id: str, source: str) -> dict:
-        raise BackendResponseError("Backend returned an error status.")
+        if isinstance(self.response, Exception):
+            raise self.response
+        return self.response

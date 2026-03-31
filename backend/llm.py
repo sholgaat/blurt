@@ -77,6 +77,8 @@ async def call_ai_cleanup(raw_note: str) -> CleanedIdea:
     try:
         response = await asyncio.to_thread(_invoke_model)
         response_text = response.text or ""
+        if not response_text.strip():
+            raise LlmError("Gemini returned an empty response.")
 
         usage = getattr(response, "usage_metadata", None)
         if usage:
@@ -87,7 +89,7 @@ async def call_ai_cleanup(raw_note: str) -> CleanedIdea:
                 getattr(usage, "total_token_count", "?"),
             )
 
-        parsed = json.loads(response_text or "{}")
+        parsed = json.loads(response_text)
     except Exception as exc:
         LOGGER.exception("Gemini client call failed: %s", exc)
         raise LlmError("Gemini client call failed") from exc

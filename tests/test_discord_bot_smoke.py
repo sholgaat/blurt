@@ -5,12 +5,12 @@ import discord
 import pytest
 
 from bot.discord.main import IdeaInboxBot
-from bot.shared.backend_client import IdeaBackendClient
-from tests.conftest import (
-    DummyBackend,
-    BackendRaisesConnectionError,
-    BackendRaisesResponseError,
+from bot.shared.backend_client import (
+    BackendConnectionError,
+    BackendResponseError,
+    IdeaBackendClient,
 )
+from tests.conftest import FakeBackend
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -100,7 +100,7 @@ _DIFFERENT_USER = MagicMock()
 
 @pytest.mark.asyncio
 async def test_dm_from_allowed_user_is_processed():
-    backend = DummyBackend()
+    backend = FakeBackend()
     bot = _make_bot(backend)
     message, _ = _make_dm_message("My idea", author_id=_ALLOWED_USER_ID)
 
@@ -121,7 +121,7 @@ async def test_dm_from_allowed_user_is_processed():
 
 @pytest.mark.asyncio
 async def test_dm_from_blocked_user_is_rejected():
-    backend = DummyBackend()
+    backend = FakeBackend()
     bot = _make_bot(backend, allowed_user_ids={_ALLOWED_USER_ID})
     message, _ = _make_dm_message(author_id=_OTHER_USER_ID)
 
@@ -140,7 +140,7 @@ async def test_dm_from_blocked_user_is_rejected():
 
 @pytest.mark.asyncio
 async def test_bot_ignores_own_messages():
-    backend = DummyBackend()
+    backend = FakeBackend()
     bot = _make_bot(backend)
     message, author = _make_dm_message(author_id=_ALLOWED_USER_ID)
 
@@ -159,7 +159,7 @@ async def test_bot_ignores_own_messages():
 
 @pytest.mark.asyncio
 async def test_guild_channel_matching_id_is_processed():
-    backend = DummyBackend()
+    backend = FakeBackend()
     bot = _make_bot(backend, idea_channel_id=_IDEA_CHANNEL_ID)
     message, _ = _make_guild_message(author_id=_ALLOWED_USER_ID, channel_id=_IDEA_CHANNEL_ID)
 
@@ -172,7 +172,7 @@ async def test_guild_channel_matching_id_is_processed():
 
 @pytest.mark.asyncio
 async def test_guild_channel_non_matching_id_is_ignored():
-    backend = DummyBackend()
+    backend = FakeBackend()
     bot = _make_bot(backend, idea_channel_id=_IDEA_CHANNEL_ID)
     message, _ = _make_guild_message(author_id=_ALLOWED_USER_ID, channel_id=999_999)
 
@@ -190,7 +190,7 @@ async def test_guild_channel_non_matching_id_is_ignored():
 
 @pytest.mark.asyncio
 async def test_guild_message_ignored_when_no_channel_id_configured():
-    backend = DummyBackend()
+    backend = FakeBackend()
     bot = _make_bot(backend, idea_channel_id=None)
     message, _ = _make_guild_message(author_id=_ALLOWED_USER_ID, channel_id=_IDEA_CHANNEL_ID)
 
@@ -203,7 +203,7 @@ async def test_guild_message_ignored_when_no_channel_id_configured():
 
 @pytest.mark.asyncio
 async def test_dm_still_processed_when_no_channel_id_configured():
-    backend = DummyBackend()
+    backend = FakeBackend()
     bot = _make_bot(backend, idea_channel_id=None)
     message, _ = _make_dm_message(author_id=_ALLOWED_USER_ID)
 
@@ -220,7 +220,7 @@ async def test_dm_still_processed_when_no_channel_id_configured():
 
 @pytest.mark.asyncio
 async def test_setup_hook_logs_warning_when_no_channel_id(caplog):
-    backend = DummyBackend()
+    backend = FakeBackend()
     backend.start = AsyncMock()
     bot = _make_bot(backend, idea_channel_id=None)
 
@@ -233,7 +233,7 @@ async def test_setup_hook_logs_warning_when_no_channel_id(caplog):
 
 @pytest.mark.asyncio
 async def test_setup_hook_no_warning_when_channel_id_set(caplog):
-    backend = DummyBackend()
+    backend = FakeBackend()
     backend.start = AsyncMock()
     bot = _make_bot(backend, idea_channel_id=_IDEA_CHANNEL_ID)
 
@@ -251,7 +251,7 @@ async def test_setup_hook_no_warning_when_channel_id_set(caplog):
 
 @pytest.mark.asyncio
 async def test_backend_connection_error_replies_gracefully():
-    backend = BackendRaisesConnectionError()
+    backend = FakeBackend(BackendConnectionError("down"))
     bot = _make_bot(backend)
     message, _ = _make_dm_message(author_id=_ALLOWED_USER_ID)
 
@@ -264,7 +264,7 @@ async def test_backend_connection_error_replies_gracefully():
 
 @pytest.mark.asyncio
 async def test_backend_response_error_replies_gracefully():
-    backend = BackendRaisesResponseError()
+    backend = FakeBackend(BackendResponseError("bad"))
     bot = _make_bot(backend)
     message, _ = _make_dm_message(author_id=_ALLOWED_USER_ID)
 

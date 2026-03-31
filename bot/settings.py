@@ -24,7 +24,7 @@ class BotSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env.bot",
         env_file_encoding="utf-8",
-        extra="forbid",
+        extra="ignore",
     )
 
     bot_provider: str = "telegram"

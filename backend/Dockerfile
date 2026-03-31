@@ -13,7 +13,6 @@ COPY backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend/ ./backend/
-COPY idea_inbox/ ./idea_inbox/
 
 EXPOSE 8000
 

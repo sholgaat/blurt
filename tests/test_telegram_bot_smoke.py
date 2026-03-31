@@ -1,11 +1,8 @@
 import pytest
 
 from bot.telegram.main import handle_message
-from tests.conftest import (
-    DummyBackend,
-    BackendRaisesConnectionError,
-    BackendRaisesResponseError,
-)
+from bot.shared.backend_client import BackendConnectionError, BackendResponseError
+from tests.conftest import FakeBackend
 
 
 class DummyMessage:
@@ -30,18 +27,18 @@ class DummyUpdate:
 
 @pytest.mark.asyncio
 async def test_handle_message_calls_backend_and_replies():
-    backend = DummyBackend()
+    backend = FakeBackend()
     update = DummyUpdate(DummyMessage("An idea"), DummyUser(42))
 
     await handle_message(backend, {42}, update, None)
 
     assert backend.called_with == ("An idea", "42", "telegram")
-    assert update.message.replies == ["💡 Created issue: Test Idea\nhttp://example.com/idea"]
+    assert update.message.replies == ["Created issue: **Test Idea**\nhttp://example.com/idea"]
 
 
 @pytest.mark.asyncio
 async def test_handle_message_returns_early_when_no_message():
-    backend = DummyBackend()
+    backend = FakeBackend()
     update = DummyUpdate(None, DummyUser(42))
 
     await handle_message(backend, {42}, update, None)
@@ -51,7 +48,7 @@ async def test_handle_message_returns_early_when_no_message():
 
 @pytest.mark.asyncio
 async def test_handle_message_returns_early_when_no_user():
-    backend = DummyBackend()
+    backend = FakeBackend()
     update = DummyUpdate(DummyMessage("An idea"), None)
 
     await handle_message(backend, {42}, update, None)
@@ -61,7 +58,7 @@ async def test_handle_message_returns_early_when_no_user():
 
 @pytest.mark.asyncio
 async def test_handle_message_backend_connection_error():
-    backend = BackendRaisesConnectionError()
+    backend = FakeBackend(BackendConnectionError("down"))
     update = DummyUpdate(DummyMessage("An idea"), DummyUser(42))
 
     await handle_message(backend, {42}, update, None)
@@ -71,7 +68,7 @@ async def test_handle_message_backend_connection_error():
 
 @pytest.mark.asyncio
 async def test_handle_message_backend_response_error():
-    backend = BackendRaisesResponseError()
+    backend = FakeBackend(BackendResponseError("bad"))
     update = DummyUpdate(DummyMessage("An idea"), DummyUser(42))
 
     await handle_message(backend, {42}, update, None)
@@ -81,7 +78,7 @@ async def test_handle_message_backend_response_error():
 
 @pytest.mark.asyncio
 async def test_handle_message_blocks_unapproved_user():
-    backend = DummyBackend()
+    backend = FakeBackend()
     update = DummyUpdate(DummyMessage("Idea text"), DummyUser(999))
 
     await handle_message(backend, {42}, update, None)
