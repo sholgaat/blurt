@@ -65,6 +65,7 @@ info "=== idea-inbox local setup ==="
 
 BACKEND_ENV="$REPO_ROOT/.env.backend"
 BOT_ENV="$REPO_ROOT/.env.bot"
+ROOT_ENV="$REPO_ROOT/.env"
 
 if [[ ! -f "$BACKEND_ENV" ]]; then
   cp "$REPO_ROOT/.env.backend.example" "$BACKEND_ENV"
@@ -78,6 +79,13 @@ if [[ ! -f "$BOT_ENV" ]]; then
   success "Created .env.bot from example"
 else
   success ".env.bot already exists — updating values in place"
+fi
+
+if [[ ! -f "$ROOT_ENV" ]]; then
+  cp "$REPO_ROOT/.env.example" "$ROOT_ENV"
+  success "Created .env from example"
+else
+  success ".env already exists — updating values in place"
 fi
 
 # ── backend secrets ───────────────────────────────────────────────────────────
@@ -110,20 +118,22 @@ success "DRY_RUN left as 'true' — no real GitHub issues will be created until 
 # ── bot provider ──────────────────────────────────────────────────────────────
 
 info "--- Bot provider ---"
-echo "  Which bot provider do you want to use?"
-echo "  [1] telegram (default)"
+echo "  Which bot provider(s) do you want to run?"
+echo "  [1] telegram"
 echo "  [2] discord"
+echo "  [3] both"
 read -r -p "  Choice [1]: " PROVIDER_CHOICE
 case "${PROVIDER_CHOICE:-1}" in
-  2) BOT_PROVIDER="discord" ;;
-  *) BOT_PROVIDER="telegram" ;;
+  2) COMPOSE_PROFILES="discord" ;;
+  3) COMPOSE_PROFILES="discord,telegram" ;;
+  *) COMPOSE_PROFILES="telegram" ;;
 esac
-set_env "$BOT_ENV" "BOT_PROVIDER" "$BOT_PROVIDER"
-success "BOT_PROVIDER=$BOT_PROVIDER"
+set_env "$ROOT_ENV" "COMPOSE_PROFILES" "$COMPOSE_PROFILES"
+success "COMPOSE_PROFILES=$COMPOSE_PROFILES"
 
 # ── provider-specific config ──────────────────────────────────────────────────
 
-if [[ "$BOT_PROVIDER" == "telegram" ]]; then
+setup_telegram() {
   info "--- Telegram configuration ---"
 
   echo "  TELEGRAM_BOT_TOKEN: the token BotFather gave you when you created the bot."
@@ -136,8 +146,9 @@ if [[ "$BOT_PROVIDER" == "telegram" ]]; then
   echo "  that are allowed to submit ideas. Find your ID by messaging @userinfobot."
   prompt_required TELEGRAM_ALLOWED_USER_IDS "TELEGRAM_ALLOWED_USER_IDS"
   set_env "$BOT_ENV" "TELEGRAM_ALLOWED_USER_IDS" "$TELEGRAM_ALLOWED_USER_IDS"
+}
 
-else
+setup_discord() {
   info "--- Discord configuration ---"
 
   echo "  DISCORD_BOT_TOKEN: the token from the Discord Developer Portal."
@@ -159,7 +170,13 @@ else
   echo "  If left blank, the bot will only respond to Direct Messages."
   prompt_optional DISCORD_IDEA_CHANNEL_ID "DISCORD_IDEA_CHANNEL_ID"
   set_env "$BOT_ENV" "DISCORD_IDEA_CHANNEL_ID" "$DISCORD_IDEA_CHANNEL_ID"
-fi
+}
+
+case "$COMPOSE_PROFILES" in
+  telegram)         setup_telegram ;;
+  discord)          setup_discord ;;
+  discord,telegram) setup_discord; setup_telegram ;;
+esac
 
 # BACKEND_URL is always correct for Docker Compose — no prompt needed.
 
@@ -172,8 +189,7 @@ echo "  1. Start the stack:"
 echo "       docker compose up -d --build"
 echo
 echo "  2. Watch logs:"
-echo "       docker compose logs -f backend"
-echo "       docker compose logs -f bot"
+echo "       docker compose logs -f"
 echo
 echo "  3. Once everything looks good, set DRY_RUN=false in .env.backend"
 echo "     to enable real GitHub issue creation."

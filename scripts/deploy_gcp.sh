@@ -50,17 +50,8 @@ prompt_secret_required() {
   done
 }
 
-prompt_secret_optional() {
-  local var_name="$1"
-  local prompt_text="$2"
-  local input_value
-  read -r -s -p "$prompt_text (leave blank to skip): " input_value
-  echo
-  printf -v "$var_name" '%s' "$input_value"
-}
-
 cleanup() {
-  rm -f "$BACKEND_ENV_TMP" "$BOT_ENV_TMP" "$ARCHIVE_TMP"
+  rm -f "$BACKEND_ENV_TMP" "$BOT_ENV_TMP" "$ROOT_ENV_TMP" "$ARCHIVE_TMP"
 }
 
 require_cmd gcloud
@@ -84,31 +75,40 @@ prompt_default ZONE "GCP zone" "${REGION}-a"
 prompt_default VM_NAME "VM name" "idea-inbox-vm"
 prompt_default MACHINE_TYPE "Machine type" "e2-small"
 prompt_default APP_DIR "Remote app directory" "~/idea-inbox"
-prompt_default BOT_PROVIDER "BOT_PROVIDER (discord|telegram)" "discord"
 
-while [[ "$BOT_PROVIDER" != "discord" && "$BOT_PROVIDER" != "telegram" ]]; do
-  echo "BOT_PROVIDER must be 'discord' or 'telegram'."
-  prompt_default BOT_PROVIDER "BOT_PROVIDER (discord|telegram)" "discord"
-done
+echo "Which bot provider(s) do you want to run?"
+echo "  [1] telegram"
+echo "  [2] discord"
+echo "  [3] both"
+read -r -p "  Choice [1]: " PROVIDER_CHOICE
+case "${PROVIDER_CHOICE:-1}" in
+  2) COMPOSE_PROFILES="discord" ;;
+  3) COMPOSE_PROFILES="discord,telegram" ;;
+  *) COMPOSE_PROFILES="telegram" ;;
+esac
 
 prompt_secret_required GEMINI_API_KEY "GEMINI_API_KEY"
 prompt_secret_required GITHUB_TOKEN "GITHUB_TOKEN"
 prompt_required GITHUB_REPO_OWNER "GITHUB_REPO_OWNER"
 prompt_required GITHUB_REPO_NAME "GITHUB_REPO_NAME"
 
-if [[ "$BOT_PROVIDER" == "discord" ]]; then
+DISCORD_BOT_TOKEN=""
+DISCORD_ALLOWED_USER_IDS=""
+DISCORD_IDEA_CHANNEL_ID=""
+TELEGRAM_BOT_TOKEN=""
+TELEGRAM_ALLOWED_USER_IDS=""
+
+if [[ "$COMPOSE_PROFILES" == *"discord"* ]]; then
   prompt_secret_required DISCORD_BOT_TOKEN "DISCORD_BOT_TOKEN"
-  prompt_required DISCORD_ALLOWED_USER_IDS "DISCORD_ALLOWED_USER_IDS (comma-separated Discord user IDs permitted to submit ideas)"
-  prompt_default DISCORD_IDEA_CHANNEL_ID "DISCORD_IDEA_CHANNEL_ID (channel ID to listen in; leave blank for DMs only)" ""
-  prompt_secret_optional TELEGRAM_BOT_TOKEN "TELEGRAM_BOT_TOKEN"
-  TELEGRAM_ALLOWED_USER_IDS=""
-else
-  prompt_secret_required TELEGRAM_BOT_TOKEN "TELEGRAM_BOT_TOKEN"
-  prompt_required TELEGRAM_ALLOWED_USER_IDS "TELEGRAM_ALLOWED_USER_IDS (comma-separated Telegram user IDs permitted to submit ideas)"
-  prompt_secret_optional DISCORD_BOT_TOKEN "DISCORD_BOT_TOKEN"
-  DISCORD_ALLOWED_USER_IDS=""
-  DISCORD_IDEA_CHANNEL_ID=""
+  prompt_required DISCORD_ALLOWED_USER_IDS "DISCORD_ALLOWED_USER_IDS (comma-separated Discord user IDs)"
+  prompt_default DISCORD_IDEA_CHANNEL_ID "DISCORD_IDEA_CHANNEL_ID (channel ID; blank for DMs only)" ""
 fi
+
+if [[ "$COMPOSE_PROFILES" == *"telegram"* ]]; then
+  prompt_secret_required TELEGRAM_BOT_TOKEN "TELEGRAM_BOT_TOKEN"
+  prompt_required TELEGRAM_ALLOWED_USER_IDS "TELEGRAM_ALLOWED_USER_IDS (comma-separated Telegram user IDs)"
+fi
+
 prompt_default DRY_RUN "DRY_RUN (true|false)" "true"
 prompt_default BACKEND_URL "BACKEND_URL for bot container" "http://backend:8000"
 
@@ -117,7 +117,7 @@ echo "Deployment summary:"
 echo "- Project: $PROJECT_ID"
 echo "- Region/Zone: $REGION / $ZONE"
 echo "- VM: $VM_NAME ($MACHINE_TYPE)"
-echo "- BOT_PROVIDER: $BOT_PROVIDER"
+echo "- COMPOSE_PROFILES: $COMPOSE_PROFILES"
 echo "- DRY_RUN: $DRY_RUN"
 echo
 read -r -p "Proceed with deployment? [y/N]: " PROCEED
@@ -144,6 +144,7 @@ fi
 
 BACKEND_ENV_TMP="$(mktemp)"
 BOT_ENV_TMP="$(mktemp)"
+ROOT_ENV_TMP="$(mktemp)"
 ARCHIVE_TMP="$(mktemp --suffix=.tar.gz)"
 trap cleanup EXIT
 
@@ -156,13 +157,16 @@ DRY_RUN=$DRY_RUN
 EOF
 
 cat >"$BOT_ENV_TMP" <<EOF
-BOT_PROVIDER=$BOT_PROVIDER
 DISCORD_BOT_TOKEN=$DISCORD_BOT_TOKEN
 DISCORD_ALLOWED_USER_IDS=$DISCORD_ALLOWED_USER_IDS
 DISCORD_IDEA_CHANNEL_ID=$DISCORD_IDEA_CHANNEL_ID
 TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN
 TELEGRAM_ALLOWED_USER_IDS=$TELEGRAM_ALLOWED_USER_IDS
 BACKEND_URL=$BACKEND_URL
+EOF
+
+cat >"$ROOT_ENV_TMP" <<EOF
+COMPOSE_PROFILES=$COMPOSE_PROFILES
 EOF
 
 echo "Packaging repo..."
@@ -197,6 +201,7 @@ echo "Uploading app and env files..."
 gcloud compute scp --zone "$ZONE" "$ARCHIVE_TMP" "$VM_NAME:/tmp/idea-inbox.tar.gz"
 gcloud compute scp --zone "$ZONE" "$BACKEND_ENV_TMP" "$VM_NAME:/tmp/.env.backend"
 gcloud compute scp --zone "$ZONE" "$BOT_ENV_TMP" "$VM_NAME:/tmp/.env.bot"
+gcloud compute scp --zone "$ZONE" "$ROOT_ENV_TMP" "$VM_NAME:/tmp/.env"
 
 echo "Deploying on VM..."
 gcloud compute ssh "$VM_NAME" --zone "$ZONE" --command "
@@ -205,6 +210,7 @@ mkdir -p $APP_DIR
 tar -xzf /tmp/idea-inbox.tar.gz -C $APP_DIR
 mv /tmp/.env.backend $APP_DIR/.env.backend
 mv /tmp/.env.bot $APP_DIR/.env.bot
+mv /tmp/.env $APP_DIR/.env
 rm -f /tmp/idea-inbox.tar.gz
 cd $APP_DIR
 sudo docker compose up -d --build
@@ -214,5 +220,4 @@ sudo docker compose ps
 echo
 echo "Deployment complete."
 echo "To inspect logs:"
-echo "  gcloud compute ssh $VM_NAME --zone $ZONE --command 'cd $APP_DIR && sudo docker compose logs -f backend'"
-echo "  gcloud compute ssh $VM_NAME --zone $ZONE --command 'cd $APP_DIR && sudo docker compose logs -f bot'"
+echo "  gcloud compute ssh $VM_NAME --zone $ZONE --command 'cd $APP_DIR && sudo docker compose logs -f'"
