@@ -31,9 +31,12 @@ async def submit_idea(
     tags = data.get("tags") or []
 
     lines = [f"Idea captured — {title}"]
+    lines.append("")
     if summary:
         lines.append(summary)
+    lines.append("")
     if tags:
         lines.append("Tags: " + " · ".join(tags))
+    lines.append("")
     lines.append(url)
     return "\n".join(lines)
