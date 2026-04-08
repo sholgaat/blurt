@@ -54,7 +54,7 @@ class IdeaInboxBot(discord.Client):
             logger.warning(
                 "Blocked message from unauthorized {user_id=%s, username=%s}", message.author.id, message.author.name
             )
-            await message.reply("Sorry, this bot is restricted to approved users.")
+            await message.reply("This bot is private — you're not on the approved list.")
             return
 
         reply = await submit_idea(

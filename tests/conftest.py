@@ -8,7 +8,12 @@ from bot.shared.backend_client import (
 
 TEST_BACKEND_URL = "http://example.com"
 
-SUCCESS_RESPONSE = {"title": "Test Idea", "url": "http://example.com/idea"}
+SUCCESS_RESPONSE = {
+    "title": "Test Idea",
+    "url": "http://example.com/idea",
+    "summary": "A test idea summary.",
+    "tags": ["test", "idea"],
+}
 
 
 class FakeBackend(IdeaBackendClient):

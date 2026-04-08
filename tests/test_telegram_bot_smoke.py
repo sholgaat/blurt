@@ -33,7 +33,9 @@ async def test_handle_message_calls_backend_and_replies():
     await handle_message(backend, {42}, update, None)
 
     assert backend.called_with == ("An idea", "42", "telegram")
-    assert update.message.replies == ["Created issue: **Test Idea**\nhttp://example.com/idea"]
+    assert update.message.replies == [
+        "Idea captured — Test Idea\nA test idea summary.\nTags: test · idea\nhttp://example.com/idea"
+    ]
 
 
 @pytest.mark.asyncio
@@ -63,7 +65,7 @@ async def test_handle_message_backend_connection_error():
 
     await handle_message(backend, {42}, update, None)
 
-    assert update.message.replies == ["Sorry, I couldn't reach the backend right now."]
+    assert update.message.replies == ["Couldn't reach the backend right now — please try again shortly."]
 
 
 @pytest.mark.asyncio
@@ -73,7 +75,7 @@ async def test_handle_message_backend_response_error():
 
     await handle_message(backend, {42}, update, None)
 
-    assert update.message.replies == ["Sorry, I couldn't log that idea (backend error)."]
+    assert update.message.replies == ["Something went wrong saving that idea — please try again."]
 
 
 @pytest.mark.asyncio
@@ -84,4 +86,4 @@ async def test_handle_message_blocks_unapproved_user():
     await handle_message(backend, {42}, update, None)
 
     assert backend.called_with is None
-    assert update.message.replies == ["Sorry, this bot is restricted to approved users."]
+    assert update.message.replies == ["This bot is private — you're not on the approved list."]

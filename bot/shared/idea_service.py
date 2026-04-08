@@ -6,8 +6,8 @@ from bot.shared.backend_client import (
     IdeaBackendClient,
 )
 
-BACKEND_UNAVAILABLE_MSG = "Sorry, I couldn't reach the backend right now."
-BACKEND_ERROR_MSG = "Sorry, I couldn't log that idea (backend error)."
+BACKEND_UNAVAILABLE_MSG = "Couldn't reach the backend right now — please try again shortly."
+BACKEND_ERROR_MSG = "Something went wrong saving that idea — please try again."
 
 
 async def submit_idea(
@@ -27,4 +27,13 @@ async def submit_idea(
 
     title = data.get("title") or "Untitled"
     url = data.get("url") or "(no URL returned)"
-    return f"Created issue: **{title}**\n{url}"
+    summary = data.get("summary") or ""
+    tags = data.get("tags") or []
+
+    lines = [f"Idea captured — {title}"]
+    if summary:
+        lines.append(summary)
+    if tags:
+        lines.append("Tags: " + " · ".join(tags))
+    lines.append(url)
+    return "\n".join(lines)

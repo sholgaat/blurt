@@ -29,7 +29,7 @@ async def handle_message(
 
     if numeric_id not in allowed_user_ids:
         logger.warning("Blocked message from unauthorized user_id=%s", numeric_id)
-        await update.message.reply_text("Sorry, this bot is restricted to approved users.")
+        await update.message.reply_text("This bot is private — you're not on the approved list.")
         return
 
     reply = await submit_idea(

@@ -130,7 +130,7 @@ async def test_dm_from_blocked_user_is_rejected():
 
     assert backend.called_with is None
     message.reply.assert_awaited_once()
-    assert "restricted" in message.reply.call_args[0][0].lower()
+    assert "private" in message.reply.call_args[0][0].lower()
 
 
 # ---------------------------------------------------------------------------
@@ -261,7 +261,6 @@ async def test_backend_connection_error_replies_gracefully():
     message.reply.assert_awaited_once()
     assert "backend" in message.reply.call_args[0][0].lower()
 
-
 @pytest.mark.asyncio
 async def test_backend_response_error_replies_gracefully():
     backend = FakeBackend(BackendResponseError("bad"))
@@ -272,4 +271,4 @@ async def test_backend_response_error_replies_gracefully():
         await bot.on_message(message)
 
     message.reply.assert_awaited_once()
-    assert "backend" in message.reply.call_args[0][0].lower()
+    assert "went wrong" in message.reply.call_args[0][0].lower()
