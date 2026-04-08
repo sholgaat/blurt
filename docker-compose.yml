@@ -1,8 +1,6 @@
 services:
   backend:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
+    image: ghcr.io/sholgaat/idea-inbox-backend:latest
     restart: unless-stopped
     env_file:
       - .env.backend
@@ -19,9 +17,7 @@ services:
 
   bot-discord:
     profiles: [discord]
-    build:
-      context: .
-      dockerfile: bot/Dockerfile
+    image: ghcr.io/sholgaat/idea-inbox-bot:latest
     restart: unless-stopped
     env_file:
       - .env.bot
@@ -33,9 +29,7 @@ services:
 
   bot-telegram:
     profiles: [telegram]
-    build:
-      context: .
-      dockerfile: bot/Dockerfile
+    image: ghcr.io/sholgaat/idea-inbox-bot:latest
     restart: unless-stopped
     env_file:
       - .env.bot
