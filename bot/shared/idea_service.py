@@ -6,8 +6,16 @@ from bot.shared.backend_client import (
     IdeaBackendClient,
 )
 
+MAX_IDEA_LENGTH = 4096
+
 BACKEND_UNAVAILABLE_MSG = "Couldn't reach the backend right now — please try again shortly."
 BACKEND_ERROR_MSG = "Something went wrong saving that idea — please try again."
+EMPTY_IDEA_MSG = "Send me your idea as a message and I'll log it."
+# Interpolate the length constant so tests and messages stay in sync if the value changes
+TOO_LONG_IDEA_MSG = (
+    f"That message is too long (max {MAX_IDEA_LENGTH} characters). "
+    "Try summarising it a bit."
+)
 
 
 async def submit_idea(

@@ -1,6 +1,7 @@
 import pytest
 
 from bot.telegram.main import handle_message
+from bot.shared.idea_service import MAX_IDEA_LENGTH
 from bot.shared.backend_client import BackendConnectionError, BackendResponseError
 from tests.conftest import FakeBackend
 
@@ -34,7 +35,7 @@ async def test_handle_message_calls_backend_and_replies():
 
     assert backend.called_with == ("An idea", "42", "telegram")
     assert update.message.replies == [
-        "Idea captured — Test Idea\nA test idea summary.\nTags: test · idea\nhttp://example.com/idea"
+        "Idea captured — Test Idea\n\nA test idea summary.\n\nTags: test · idea\n\nhttp://example.com/idea"
     ]
 
 
@@ -86,4 +87,41 @@ async def test_handle_message_blocks_unapproved_user():
     await handle_message(backend, {42}, update, None)
 
     assert backend.called_with is None
-    assert update.message.replies == ["This bot is private — you're not on the approved list."]
+    assert update.message.replies == [
+        "This bot is private — you're not on the approved list. "
+        "Ask the owner to add your user ID: 999"
+    ]
+
+
+@pytest.mark.asyncio
+async def test_handle_message_rejects_empty_message():
+    backend = FakeBackend()
+    update = DummyUpdate(DummyMessage("   "), DummyUser(42))
+
+    await handle_message(backend, {42}, update, None)
+
+    assert backend.called_with is None
+    assert update.message.replies == ["Send me your idea as a message and I'll log it."]
+
+
+@pytest.mark.asyncio
+async def test_handle_message_rejects_too_long_message():
+    backend = FakeBackend()
+    update = DummyUpdate(DummyMessage("x" * 4097), DummyUser(42))
+
+    await handle_message(backend, {42}, update, None)
+
+    assert backend.called_with is None
+    assert update.message.replies == [
+        f"That message is too long (max {MAX_IDEA_LENGTH} characters). Try summarising it a bit."
+    ]
+
+
+@pytest.mark.asyncio
+async def test_handle_message_accepts_message_at_max_length():
+    backend = FakeBackend()
+    update = DummyUpdate(DummyMessage("x" * 4096), DummyUser(42))
+
+    await handle_message(backend, {42}, update, None)
+
+    assert backend.called_with is not None

@@ -7,7 +7,12 @@ from telegram import Update
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
 
 from bot.shared.backend_client import IdeaBackendClient
-from bot.shared.idea_service import submit_idea
+from bot.shared.idea_service import (
+    EMPTY_IDEA_MSG,
+    MAX_IDEA_LENGTH,
+    TOO_LONG_IDEA_MSG,
+    submit_idea,
+)
 from bot.settings import get_bot_settings
 
 logging.basicConfig(level=logging.INFO)
@@ -29,7 +34,17 @@ async def handle_message(
 
     if numeric_id not in allowed_user_ids:
         logger.warning("Blocked message from unauthorized user_id=%s", numeric_id)
-        await update.message.reply_text("This bot is private — you're not on the approved list.")
+        await update.message.reply_text(
+            f"This bot is private — you're not on the approved list. "
+            f"Ask the owner to add your user ID: {numeric_id}"
+        )
+        return
+
+    if not text.strip():
+        await update.message.reply_text(EMPTY_IDEA_MSG)
+        return
+    if len(text) > MAX_IDEA_LENGTH:
+        await update.message.reply_text(TOO_LONG_IDEA_MSG)
         return
 
     reply = await submit_idea(

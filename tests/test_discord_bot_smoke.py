@@ -5,6 +5,7 @@ import discord
 import pytest
 
 from bot.discord.main import IdeaInboxBot
+from bot.shared.idea_service import MAX_IDEA_LENGTH
 from bot.shared.backend_client import (
     BackendConnectionError,
     BackendResponseError,
@@ -130,7 +131,9 @@ async def test_dm_from_blocked_user_is_rejected():
 
     assert backend.called_with is None
     message.reply.assert_awaited_once()
-    assert "private" in message.reply.call_args[0][0].lower()
+    reply_text = message.reply.call_args[0][0]
+    assert "private" in reply_text.lower()
+    assert str(_OTHER_USER_ID) in reply_text
 
 
 # ---------------------------------------------------------------------------
@@ -272,3 +275,51 @@ async def test_backend_response_error_replies_gracefully():
 
     message.reply.assert_awaited_once()
     assert "went wrong" in message.reply.call_args[0][0].lower()
+
+
+# ---------------------------------------------------------------------------
+# Tests: Empty and too-long message validation
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_empty_message_is_rejected():
+    backend = FakeBackend()
+    bot = _make_bot(backend)
+    message, _ = _make_dm_message(content="   ", author_id=_ALLOWED_USER_ID)
+
+    with _patch_bot_user(bot, _DIFFERENT_USER):
+        await bot.on_message(message)
+
+    assert backend.called_with is None
+    message.reply.assert_awaited_once()
+    assert "send me your idea" in message.reply.call_args[0][0].lower()
+
+
+@pytest.mark.asyncio
+async def test_too_long_message_is_rejected():
+    backend = FakeBackend()
+    bot = _make_bot(backend)
+    message, _ = _make_dm_message(content="x" * 4097, author_id=_ALLOWED_USER_ID)
+
+    with _patch_bot_user(bot, _DIFFERENT_USER):
+        await bot.on_message(message)
+
+    assert backend.called_with is None
+    message.reply.assert_awaited_once()
+    assert (
+        message.reply.call_args[0][0]
+        == f"That message is too long (max {MAX_IDEA_LENGTH} characters). Try summarising it a bit."
+    )
+
+
+@pytest.mark.asyncio
+async def test_message_at_max_length_is_accepted():
+    backend = FakeBackend()
+    bot = _make_bot(backend)
+    message, _ = _make_dm_message(content="x" * 4096, author_id=_ALLOWED_USER_ID)
+
+    with _patch_bot_user(bot, _DIFFERENT_USER):
+        await bot.on_message(message)
+
+    assert backend.called_with is not None

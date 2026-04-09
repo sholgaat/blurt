@@ -6,7 +6,12 @@ import discord
 from discord import Message
 
 from bot.shared.backend_client import IdeaBackendClient
-from bot.shared.idea_service import submit_idea
+from bot.shared.idea_service import (
+    EMPTY_IDEA_MSG,
+    MAX_IDEA_LENGTH,
+    TOO_LONG_IDEA_MSG,
+    submit_idea,
+)
 from bot.settings import get_bot_settings
 
 logging.basicConfig(level=logging.INFO)
@@ -54,12 +59,23 @@ class IdeaInboxBot(discord.Client):
             logger.warning(
                 "Blocked message from unauthorized {user_id=%s, username=%s}", message.author.id, message.author.name
             )
-            await message.reply("This bot is private — you're not on the approved list.")
+            await message.reply(
+                f"This bot is private — you're not on the approved list. "
+                f"Ask the owner to add your user ID: {message.author.id}"
+            )
+            return
+
+        text = message.content or ""
+        if not text.strip():
+            await message.reply(EMPTY_IDEA_MSG)
+            return
+        if len(text) > MAX_IDEA_LENGTH:
+            await message.reply(TOO_LONG_IDEA_MSG)
             return
 
         reply = await submit_idea(
             self.backend_client,
-            text=message.content or "",
+            text=text,
             user_id=str(message.author.id),
             source="discord",
         )

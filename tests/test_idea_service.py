@@ -9,7 +9,7 @@ from tests.conftest import FakeBackend
 async def test_submit_idea_success():
     backend = FakeBackend({"title": "Hello", "url": "http://example.com"})
     reply = await submit_idea(backend, text="text", user_id="1", source="discord")
-    assert reply == "Idea captured — Hello\nhttp://example.com"
+    assert reply == "Idea captured — Hello\n\n\n\nhttp://example.com"
 
 
 @pytest.mark.asyncio
