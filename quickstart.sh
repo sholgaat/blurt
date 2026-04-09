@@ -97,9 +97,38 @@ ensure_env_file "$ROOT_ENV" "$REPO_ROOT/.env.example" "Created .env from example
 
 info "--- Backend configuration ---"
 
-echo "  GEMINI_API_KEY: needed to call the Gemini API for idea structuring."
-prompt_value GEMINI_API_KEY "GEMINI_API_KEY" true
-set_env "$BACKEND_ENV" "GEMINI_API_KEY" "$GEMINI_API_KEY"
+echo "  Which LLM provider do you want to use for idea structuring?"
+echo "  [1] gemini"
+echo "  [2] openai"
+while true; do
+  read -r -p "  Choice (1/2): " LLM_PROVIDER_CHOICE
+
+  case "$LLM_PROVIDER_CHOICE" in
+    1)
+      LLM_PROVIDER="gemini"
+      echo
+      echo "  GEMINI_API_KEY: needed to call the Gemini API for idea structuring."
+      prompt_value GEMINI_API_KEY "GEMINI_API_KEY" true
+      set_env "$BACKEND_ENV" "LLM_PROVIDER" "$LLM_PROVIDER"
+      set_env "$BACKEND_ENV" "GEMINI_API_KEY" "$GEMINI_API_KEY"
+      set_env "$BACKEND_ENV" "OPENAI_API_KEY" ""
+      break
+      ;;
+    2)
+      LLM_PROVIDER="openai"
+      echo
+      echo "  OPENAI_API_KEY: needed to call the OpenAI API for idea structuring."
+      prompt_value OPENAI_API_KEY "OPENAI_API_KEY" true
+      set_env "$BACKEND_ENV" "LLM_PROVIDER" "$LLM_PROVIDER"
+      set_env "$BACKEND_ENV" "OPENAI_API_KEY" "$OPENAI_API_KEY"
+      set_env "$BACKEND_ENV" "GEMINI_API_KEY" ""
+      break
+      ;;
+    *)
+      echo "  Invalid choice. Enter 1 or 2."
+      ;;
+  esac
+done
 
 echo
 echo "  GITHUB_TOKEN: a Personal Access Token (classic: 'repo' scope;"

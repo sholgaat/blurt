@@ -17,6 +17,7 @@ class BackendSettings(BaseSettings):
     github_repo_name: str = ""
     llm_provider: str = "gemini"
     gemini_api_key: str = ""
+    openai_api_key: str = ""
     dry_run: bool = False
 
 

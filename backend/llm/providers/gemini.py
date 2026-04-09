@@ -6,6 +6,7 @@ import logging
 
 from google import genai
 from google.genai import types
+from pydantic import ValidationError
 
 from backend.llm.base import (
     BaseLlmProvider,
@@ -13,7 +14,6 @@ from backend.llm.base import (
     LlmError,
     RESPONSE_SCHEMA,
     SYSTEM_INSTRUCTION,
-    normalize_cleaned_idea,
 )
 from backend.settings import get_backend_settings
 
@@ -66,9 +66,12 @@ class GeminiLlmProvider(BaseLlmProvider):
                 )
 
             parsed = json.loads(response_text)
-            return normalize_cleaned_idea(
-                parsed, provider_display_name=self.display_name
-            )
+            return CleanedIdea.model_validate(parsed)
+        except (json.JSONDecodeError, ValidationError) as exc:
+            LOGGER.warning("%s returned invalid structured output", self.display_name)
+            raise LlmError(
+                f"{self.display_name} returned invalid structured output."
+            ) from exc
         except LlmError:
             LOGGER.warning("%s returned invalid structured output", self.display_name)
             raise

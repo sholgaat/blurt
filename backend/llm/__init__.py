@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from backend.llm.base import CleanedIdea, LlmError, ensure_default_tags
+from backend.llm.base import CleanedIdea, LlmError
 from backend.llm.factory import get_llm_provider
 
 LOGGER = logging.getLogger(__name__)
@@ -20,6 +20,5 @@ __all__ = [
     "CleanedIdea",
     "LlmError",
     "call_ai_cleanup",
-    "ensure_default_tags",
     "get_llm_provider",
 ]

@@ -3,6 +3,7 @@ import pytest
 
 from backend import main
 from backend.llm import LlmError
+from backend.llm.base import CleanedIdea
 
 
 @pytest.fixture
@@ -12,7 +13,7 @@ def client():
 
 def test_create_idea_success(monkeypatch, client):
     async def fake_cleanup(raw_text: str):
-        return {"title": "AI Title", "summary": "AI Summary", "tags": ["dev"]}
+        return CleanedIdea(title="AI Title", summary="AI Summary", tags=["dev"])
 
     async def fake_create_issue(**kwargs):
         return "https://example.com/issue/123"
@@ -37,7 +38,7 @@ def test_create_idea_success(monkeypatch, client):
 
 def test_create_idea_dry_run_prepends_nudge(monkeypatch, client):
     async def fake_cleanup(raw_text: str):
-        return {"title": "AI Title", "summary": "AI Summary", "tags": ["dev"]}
+        return CleanedIdea(title="AI Title", summary="AI Summary", tags=["dev"])
 
     async def fake_create_issue(**kwargs):
         return "https://example.com/dry-run-issue"
@@ -75,7 +76,7 @@ def test_create_idea_llm_failure(monkeypatch, client):
 
 def test_create_idea_github_failure(monkeypatch, client):
     async def fake_cleanup(raw_text: str):
-        return {"title": "T", "summary": "S", "tags": ["dev"]}
+        return CleanedIdea(title="T", summary="S", tags=["dev"])
 
     async def failing_issue(**kwargs):
         raise RuntimeError("github down")

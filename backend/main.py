@@ -79,9 +79,9 @@ async def create_idea_endpoint(payload: IdeaRequest) -> IdeaResponse:
             detail="Idea processing is temporarily unavailable. Please try again later.",
         ) from exc
 
-    title = llm_result["title"]
-    summary = llm_result["summary"]
-    tags = llm_result["tags"]
+    title = llm_result.title
+    summary = llm_result.summary
+    tags = llm_result.tags
     metadata = {"source": payload.source, "user_id": payload.user_id}
 
     try:
