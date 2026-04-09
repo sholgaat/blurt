@@ -15,6 +15,7 @@ class BackendSettings(BaseSettings):
     github_token: str = ""
     github_repo_owner: str = ""
     github_repo_name: str = ""
+    llm_provider: str = "gemini"
     gemini_api_key: str = ""
     dry_run: bool = False
 
