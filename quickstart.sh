@@ -48,6 +48,19 @@ prompt_optional() {
   printf -v "$var_name" '%s' "$input_value"
 }
 
+# Prompt the user to type an exact confirmation token.
+# Returns 0 on success (typed exactly), 1 otherwise.
+prompt_typed_confirm() {
+  local prompt_text="$1"
+  local token="$2"
+  local input_value
+  read -r -p "  $prompt_text (type \"$token\" to confirm): " input_value
+  if [[ "$input_value" == "$token" ]]; then
+    return 0
+  fi
+  return 1
+}
+
 # Write KEY=VALUE into a file, replacing the existing KEY=... line.
 set_env() {
   local file="$1"
@@ -114,6 +127,13 @@ set_env "$BACKEND_ENV" "GITHUB_REPO_NAME" "$GITHUB_REPO_NAME"
 
 # DRY_RUN defaults to true in the example; leave it as-is for first run safety.
 success "DRY_RUN left as 'true' — no real GitHub issues will be created until you change this."
+
+# Show current DRY_RUN value so it's very visible during setup.
+DRY_RUN_VALUE="$(grep -m1 '^DRY_RUN=' "$BACKEND_ENV" | cut -d'=' -f2- || true)"
+info "!!! IMPORTANT: DRY_RUN is currently: ${DRY_RUN_VALUE:-<unset>} (file: $BACKEND_ENV)"
+if [[ "${DRY_RUN_VALUE:-}" != "true" ]]; then
+  echo "  Note: DRY_RUN is not 'true'. Real GitHub issues will be created!"
+fi
 
 # ── bot provider ──────────────────────────────────────────────────────────────
 
@@ -194,3 +214,19 @@ echo
 echo "  3. Once everything looks good, set DRY_RUN=false in .env.backend"
 echo "     to enable real GitHub issue creation."
 echo
+
+# Offer to disable DRY_RUN now with a strong typed confirmation.
+if grep -q '^DRY_RUN=false' "$BACKEND_ENV"; then
+  info "DRY_RUN already set to false in $BACKEND_ENV — real GitHub issues will be created."
+else
+  echo
+  echo "Would you like to disable DRY_RUN now and enable real GitHub issue creation?"
+  if prompt_typed_confirm "Confirm disabling DRY_RUN" "LIVE MODE"; then
+    set_env "$BACKEND_ENV" "DRY_RUN" "false"
+    success "DRY_RUN set to false in $BACKEND_ENV — real GitHub issues will be created."
+  else
+    info "DRY_RUN left as '${DRY_RUN_VALUE:-}' — you can change it later with:"
+    echo "    sed -i 's/^DRY_RUN=.*/DRY_RUN=false/' $BACKEND_ENV"
+    echo "  (or open $BACKEND_ENV and edit DRY_RUN=true → DRY_RUN=false)"
+  fi
+fi
