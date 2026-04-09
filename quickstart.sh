@@ -100,8 +100,9 @@ info "--- Backend configuration ---"
 echo "  Which LLM provider do you want to use for idea structuring?"
 echo "  [1] gemini"
 echo "  [2] openai"
+echo "  [3] anthropic"
 while true; do
-  read -r -p "  Choice (1/2): " LLM_PROVIDER_CHOICE
+  read -r -p "  Choice (1/2/3): " LLM_PROVIDER_CHOICE
 
   case "$LLM_PROVIDER_CHOICE" in
     1)
@@ -112,6 +113,7 @@ while true; do
       set_env "$BACKEND_ENV" "LLM_PROVIDER" "$LLM_PROVIDER"
       set_env "$BACKEND_ENV" "GEMINI_API_KEY" "$GEMINI_API_KEY"
       set_env "$BACKEND_ENV" "OPENAI_API_KEY" ""
+      set_env "$BACKEND_ENV" "ANTHROPIC_API_KEY" ""
       break
       ;;
     2)
@@ -122,10 +124,22 @@ while true; do
       set_env "$BACKEND_ENV" "LLM_PROVIDER" "$LLM_PROVIDER"
       set_env "$BACKEND_ENV" "OPENAI_API_KEY" "$OPENAI_API_KEY"
       set_env "$BACKEND_ENV" "GEMINI_API_KEY" ""
+      set_env "$BACKEND_ENV" "ANTHROPIC_API_KEY" ""
+      break
+      ;;
+    3)
+      LLM_PROVIDER="anthropic"
+      echo
+      echo "  ANTHROPIC_API_KEY: needed to call the Anthropic API for idea structuring."
+      prompt_value ANTHROPIC_API_KEY "ANTHROPIC_API_KEY" true
+      set_env "$BACKEND_ENV" "LLM_PROVIDER" "$LLM_PROVIDER"
+      set_env "$BACKEND_ENV" "ANTHROPIC_API_KEY" "$ANTHROPIC_API_KEY"
+      set_env "$BACKEND_ENV" "GEMINI_API_KEY" ""
+      set_env "$BACKEND_ENV" "OPENAI_API_KEY" ""
       break
       ;;
     *)
-      echo "  Invalid choice. Enter 1 or 2."
+      echo "  Invalid choice. Enter 1, 2, or 3."
       ;;
   esac
 done

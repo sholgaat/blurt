@@ -6,3 +6,4 @@ pydantic-settings
 python-dotenv
 google-genai
 openai
+anthropic==0.92.0

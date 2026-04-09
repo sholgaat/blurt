@@ -4,6 +4,7 @@ import logging
 from functools import lru_cache
 
 from backend.llm.base import BaseLlmProvider, LlmError
+from backend.llm.providers.anthropic import AnthropicLlmProvider
 from backend.llm.providers.gemini import GeminiLlmProvider
 from backend.llm.providers.openai import OpenAILlmProvider
 from backend.settings import get_backend_settings
@@ -13,6 +14,7 @@ LOGGER = logging.getLogger(__name__)
 _PROVIDER_REGISTRY: dict[str, type[BaseLlmProvider]] = {
     GeminiLlmProvider.provider_key: GeminiLlmProvider,
     OpenAILlmProvider.provider_key: OpenAILlmProvider,
+    AnthropicLlmProvider.provider_key: AnthropicLlmProvider,
 }
 
 
