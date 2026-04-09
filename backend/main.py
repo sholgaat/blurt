@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from backend import github_client
 from backend.github_client import create_issue
 from backend.llm import LlmError, call_ai_cleanup
+from backend.settings import get_backend_settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -61,6 +62,8 @@ def health() -> dict[str, str]:
 
 @app.post("/ideas", response_model=IdeaResponse)
 async def create_idea_endpoint(payload: IdeaRequest) -> IdeaResponse:
+    cfg = get_backend_settings()
+
     logger.info(
         "Creating idea (user=%s, source=%s)",
         payload.user_id,
@@ -102,5 +105,12 @@ async def create_idea_endpoint(payload: IdeaRequest) -> IdeaResponse:
         tags,
         issue_url,
     )
+
+    if cfg.dry_run:
+        summary = (
+            "Dry run worked. Set DRY_RUN=false in .env.backend and restart the backend "
+            "to go live.\n\n"
+            + summary
+        )
 
     return IdeaResponse(title=title, summary=summary, tags=tags, url=issue_url)
