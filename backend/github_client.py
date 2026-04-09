@@ -16,13 +16,13 @@ def _build_issue_body(
     summary: str,
     tags: Iterable[str],
     original_text: str,
-    metadata: Mapping[str, str | None] | None = None,
+    metadata: Mapping[str, str] | None = None,
 ) -> str:
-    quoted = "\n".join(f"> {line}" for line in (original_text or "").splitlines()) or "> (empty)"
+    quoted = "\n".join(f"> {line}" for line in (original_text or "").splitlines())
 
     body_sections = [
         "## Summary",
-        summary or "(no summary)",
+        summary,
         "",
         "## Original Note",
         quoted,
@@ -45,7 +45,7 @@ def _build_issue_body(
 
 
 def _prepare_labels(
-    tags: Iterable[str], metadata: Mapping[str, str | None] | None
+    tags: Iterable[str], metadata: Mapping[str, str] | None
 ) -> list[str]:
     labels = list(dict.fromkeys(tags or []))
     source = (metadata or {}).get("source", "")
@@ -61,7 +61,7 @@ async def create_issue(
     summary: str,
     tags: list[str],
     original_text: str,
-    metadata: Mapping[str, str | None] | None = None,
+    metadata: Mapping[str, str] | None = None,
 ) -> str:
     cfg = get_backend_settings()
     owner = cfg.github_repo_owner
@@ -94,7 +94,9 @@ async def create_issue(
         return "https://example.com/dry-run-issue"
 
     if http_client is None:
-        raise RuntimeError("GitHub HTTP client not initialized. Is the app lifespan running?")
+        raise RuntimeError(
+            "GitHub HTTP client not initialized. Is the app lifespan running?"
+        )
 
     response = await http_client.post(url, json=payload, headers=headers, timeout=20.0)
 

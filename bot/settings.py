@@ -39,7 +39,9 @@ class BotSettings(BaseSettings):
     telegram_bot_token: str = ""
     telegram_allowed_user_ids: set[int] = Field(default_factory=set)
 
-    @field_validator("discord_allowed_user_ids", "telegram_allowed_user_ids", mode="before")
+    @field_validator(
+        "discord_allowed_user_ids", "telegram_allowed_user_ids", mode="before"
+    )
     @classmethod
     def _parse_id_set(cls, v: object) -> set[int]:
         return _parse_int_set(v)

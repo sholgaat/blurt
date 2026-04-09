@@ -13,9 +13,7 @@ from backend.settings import get_backend_settings
 
 LOGGER = logging.getLogger(__name__)
 MODEL_NAME = "gemini-2.5-flash-lite"
-SYSTEM_INSTRUCTION = (
-    "Extract a short descriptive title, a clear concise summary, and 2-7 relevant tags from the user text."
-)
+SYSTEM_INSTRUCTION = "Extract a short descriptive title, a clear concise summary, and 2-7 relevant tags from the user text."
 
 _RESPONSE_SCHEMA = {
     "type": "object",
@@ -35,6 +33,7 @@ _RESPONSE_SCHEMA = {
 
 class CleanedIdea(TypedDict):
     """Structure returned by LLM cleanup."""
+
     title: str
     summary: str
     tags: list[str]

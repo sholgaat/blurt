@@ -34,7 +34,10 @@ app = FastAPI(title="Idea Inbox Backend", version="0.0.1", lifespan=lifespan)
 
 class IdeaRequest(BaseModel):
     text: str = Field(
-        ..., description="Raw idea text from the user", min_length=1, max_length=MAX_IDEA_LENGTH
+        ...,
+        description="Raw idea text from the user",
+        min_length=1,
+        max_length=MAX_IDEA_LENGTH,
     )
     user_id: str | None = Field(
         None, description="User identifier if available from the source"
