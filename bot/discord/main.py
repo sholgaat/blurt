@@ -24,8 +24,8 @@ class IdeaInboxBot(discord.Client):
         *,
         intents: discord.Intents,
         backend_client: IdeaBackendClient,
-        allowed_user_ids: set[int],
-        idea_channel_id: int | None,
+        allowed_user_ids: set[str],
+        idea_channel_id: str,
     ):
         super().__init__(intents=intents)
         self.backend_client = backend_client
@@ -34,7 +34,7 @@ class IdeaInboxBot(discord.Client):
 
     async def setup_hook(self) -> None:
         await self.backend_client.start()
-        if self.idea_channel_id is None:
+        if not self.idea_channel_id:
             logger.warning(
                 "DISCORD_IDEA_CHANNEL_ID is not set. "
                 "The bot will only respond to Direct Messages. "
@@ -57,7 +57,7 @@ class IdeaInboxBot(discord.Client):
         if not self._should_process_message(message):
             return
 
-        if message.author.id not in self.allowed_user_ids:
+        if str(message.author.id) not in self.allowed_user_ids:
             logger.warning(
                 "Blocked message from unauthorized {user_id=%s, username=%s}",
                 message.author.id,
@@ -88,9 +88,9 @@ class IdeaInboxBot(discord.Client):
     def _should_process_message(self, message: Message) -> bool:
         if isinstance(message.channel, discord.DMChannel):
             return True
-        if self.idea_channel_id is None:
+        if not self.idea_channel_id:
             return False
-        return message.channel.id == self.idea_channel_id
+        return str(message.channel.id) == self.idea_channel_id
 
 
 def main() -> None:

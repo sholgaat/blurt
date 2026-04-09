@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 async def handle_message(
     backend_client: IdeaBackendClient,
-    allowed_user_ids: set[int],
+    allowed_user_ids: set[str],
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
@@ -32,7 +32,7 @@ async def handle_message(
     user_id = str(update.effective_user.id)
     numeric_id = update.effective_user.id
 
-    if numeric_id not in allowed_user_ids:
+    if user_id not in allowed_user_ids:
         logger.warning("Blocked message from unauthorized user_id=%s", numeric_id)
         await update.message.reply_text(
             f"This bot is private — you're not on the approved list. "

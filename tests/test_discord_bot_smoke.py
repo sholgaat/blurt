@@ -30,17 +30,17 @@ _IDEA_CHANNEL_ID = 42
 def _make_bot(
     backend: IdeaBackendClient,
     *,
-    allowed_user_ids: set[int] | None = None,
+    allowed_user_ids: set[str] | None = None,
     idea_channel_id: int | None = None,
 ) -> IdeaInboxBot:
     if allowed_user_ids is None:
-        allowed_user_ids = {_ALLOWED_USER_ID}
+        allowed_user_ids = {str(_ALLOWED_USER_ID)}
     intents = discord.Intents.none()
     return IdeaInboxBot(
         intents=intents,
         backend_client=backend,
         allowed_user_ids=allowed_user_ids,
-        idea_channel_id=idea_channel_id,
+        idea_channel_id=str(idea_channel_id) if idea_channel_id is not None else "",
     )
 
 
@@ -123,7 +123,7 @@ async def test_dm_from_allowed_user_is_processed():
 @pytest.mark.asyncio
 async def test_dm_from_blocked_user_is_rejected():
     backend = FakeBackend()
-    bot = _make_bot(backend, allowed_user_ids={_ALLOWED_USER_ID})
+    bot = _make_bot(backend, allowed_user_ids={str(_ALLOWED_USER_ID)})
     message, _ = _make_dm_message(author_id=_OTHER_USER_ID)
 
     with _patch_bot_user(bot, _DIFFERENT_USER):

@@ -6,17 +6,17 @@ from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-def _parse_int_set(value: object) -> set[int]:
-    """Coerce a comma-separated string or other input into a set of ints."""
+def _parse_str_set(value: object) -> set[str]:
+    """Coerce a comma-separated string or other input into a set of strings."""
     if isinstance(value, set):
-        return value
+        return {str(v).strip() for v in value if str(v).strip()}
     if isinstance(value, (list, tuple, frozenset)):
-        return {int(v) for v in value if str(v).strip()}
+        return {str(v).strip() for v in value if str(v).strip()}
     if isinstance(value, int):
-        return {value}
+        return {str(value)}
     if isinstance(value, str):
         parts = value.split(",")
-        return {int(p.strip()) for p in parts if p.strip()}
+        return {p.strip() for p in parts if p.strip()}
     return set()
 
 
@@ -32,19 +32,19 @@ class BotSettings(BaseSettings):
 
     # Discord
     discord_bot_token: str = ""
-    discord_allowed_user_ids: set[int] = Field(default_factory=set)
-    discord_idea_channel_id: int | None = None
+    discord_allowed_user_ids: set[str] = Field(default_factory=set)
+    discord_idea_channel_id: str = ""
 
     # Telegram
     telegram_bot_token: str = ""
-    telegram_allowed_user_ids: set[int] = Field(default_factory=set)
+    telegram_allowed_user_ids: set[str] = Field(default_factory=set)
 
     @field_validator(
         "discord_allowed_user_ids", "telegram_allowed_user_ids", mode="before"
     )
     @classmethod
-    def _parse_id_set(cls, v: object) -> set[int]:
-        return _parse_int_set(v)
+    def _parse_id_set(cls, v: object) -> set[str]:
+        return _parse_str_set(v)
 
 
 @lru_cache(maxsize=1)
