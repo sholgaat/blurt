@@ -5,6 +5,7 @@ import logging
 import openai
 
 from backend.llm.base import BaseLlmProvider, CleanedIdea, LlmError, SYSTEM_INSTRUCTION
+from backend.llm._logging import log_token_usage
 from backend.settings import get_backend_settings
 
 LOGGER = logging.getLogger(__name__)
@@ -44,20 +45,31 @@ class OpenAILlmProvider(BaseLlmProvider):
             if parsed is None:
                 raise LlmError(f"{self.display_name} returned an empty response.")
 
-            usage = getattr(response, "usage", None)
-            if usage:
-                LOGGER.info(
-                    "%s usage - prompt: %s tokens, completion: %s tokens, total: %s tokens",
-                    self.display_name,
-                    getattr(usage, "prompt_tokens", "?"),
-                    getattr(usage, "completion_tokens", "?"),
-                    getattr(usage, "total_tokens", "?"),
-                )
-
+            log_token_usage(self, response)
             return parsed
         except LlmError:
-            LOGGER.warning("%s returned invalid structured output", self.display_name)
             raise
         except Exception as exc:
             LOGGER.exception("%s client call failed: %s", self.display_name, exc)
             raise LlmError(f"{self.display_name} client call failed") from exc
+
+    def get_input_tokens(self, response) -> int | None:
+        """Extract input token count from OpenAI response."""
+        usage = getattr(response, "usage", None)
+        if not usage:
+            return None
+        return getattr(usage, "prompt_tokens", None)
+
+    def get_output_tokens(self, response) -> int | None:
+        """Extract output token count from OpenAI response."""
+        usage = getattr(response, "usage", None)
+        if not usage:
+            return None
+        return getattr(usage, "completion_tokens", None)
+
+    def get_total_tokens(self, response) -> int | None:
+        """Extract total token count from OpenAI response."""
+        usage = getattr(response, "usage", None)
+        if not usage:
+            return None
+        return getattr(usage, "total_tokens", None)

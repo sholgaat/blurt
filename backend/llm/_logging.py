@@ -12,12 +12,17 @@ def log_token_usage(provider: BaseLlmProvider, response: Any) -> None:
     """Log token usage for a provider response.
     
     Each provider's get_*_tokens methods normalize their response
-    structure to this common interface.
+    structure, returning either an int or None. This function
+    formats them for logging, using "?" for unavailable values.
     """
+    input_tokens = provider.get_input_tokens(response) or "?"
+    output_tokens = provider.get_output_tokens(response) or "?"
+    total_tokens = provider.get_total_tokens(response) or "?"
+
     LOGGER.info(
         "%s usage - prompt: %s tokens, completion: %s tokens, total: %s tokens",
         provider.display_name,
-        provider.get_input_tokens(response),
-        provider.get_output_tokens(response),
-        provider.get_total_tokens(response),
+        input_tokens,
+        output_tokens,
+        total_tokens,
     )

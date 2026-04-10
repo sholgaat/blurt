@@ -10,6 +10,7 @@ from backend.llm.base import (
     RESPONSE_SCHEMA,
     SYSTEM_INSTRUCTION,
 )
+from backend.llm._logging import log_token_usage
 from backend.settings import get_backend_settings
 
 LOGGER = logging.getLogger(__name__)
@@ -64,19 +65,7 @@ class OllamaLlmProvider(BaseLlmProvider):
             if not str(response_text).strip():
                 raise LlmError(f"{self.display_name} returned an empty response.")
 
-            prompt_tokens = self._response_value(response, "prompt_eval_count", "?")
-            completion_tokens = self._response_value(response, "eval_count", "?")
-            total_tokens = "?"
-            if isinstance(prompt_tokens, int) and isinstance(completion_tokens, int):
-                total_tokens = prompt_tokens + completion_tokens
-
-            LOGGER.info(
-                "%s usage - prompt: %s tokens, completion: %s tokens, total: %s tokens",
-                self.display_name,
-                prompt_tokens,
-                completion_tokens,
-                total_tokens,
-            )
+            log_token_usage(self, response)
 
             parsed = json.loads(response_text)
             return CleanedIdea.model_validate(parsed)
@@ -108,6 +97,22 @@ class OllamaLlmProvider(BaseLlmProvider):
 
             LOGGER.exception("%s client call failed: %s", self.display_name, exc)
             raise LlmError(f"{self.display_name} client call failed") from exc
+
+    def get_input_tokens(self, response) -> int | None:
+        """Extract input token count from Ollama response."""
+        return self._response_value(response, "prompt_eval_count", None)
+
+    def get_output_tokens(self, response) -> int | None:
+        """Extract output token count from Ollama response."""
+        return self._response_value(response, "eval_count", None)
+
+    def get_total_tokens(self, response) -> int | None:
+        """Extract or derive total token count from Ollama response."""
+        prompt = self.get_input_tokens(response)
+        output = self.get_output_tokens(response)
+        if prompt is not None and output is not None:
+            return prompt + output
+        return None
 
     @staticmethod
     def _response_value(response: object, key: str, default: object) -> object:

@@ -57,18 +57,18 @@ class BaseLlmProvider(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_input_tokens(self, response: Any) -> int | str:
-        """Return input/prompt token count or "?" if unavailable."""
+    def get_input_tokens(self, response: Any) -> int | None:
+        """Return input/prompt token count or None if unavailable."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_output_tokens(self, response: Any) -> int | str:
-        """Return output/completion token count or "?" if unavailable."""
+    def get_output_tokens(self, response: Any) -> int | None:
+        """Return output/completion token count or None if unavailable."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_total_tokens(self, response: Any) -> int | str:
-        """Return total token count or "?" if unavailable.
+    def get_total_tokens(self, response: Any) -> int | None:
+        """Return total token count or None if unavailable.
         
         Can derive from input+output if not directly exposed.
         """

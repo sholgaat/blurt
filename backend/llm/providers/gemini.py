@@ -14,6 +14,7 @@ from backend.llm.base import (
     RESPONSE_SCHEMA,
     SYSTEM_INSTRUCTION,
 )
+from backend.llm._logging import log_token_usage
 from backend.settings import get_backend_settings
 
 LOGGER = logging.getLogger(__name__)
@@ -55,26 +56,37 @@ class GeminiLlmProvider(BaseLlmProvider):
             if not response_text.strip():
                 raise LlmError(f"{self.display_name} returned an empty response.")
 
-            usage = getattr(response, "usage_metadata", None)
-            if usage:
-                LOGGER.info(
-                    "%s usage - prompt: %s tokens, completion: %s tokens, total: %s tokens",
-                    self.display_name,
-                    getattr(usage, "prompt_token_count", "?"),
-                    getattr(usage, "candidates_token_count", "?"),
-                    getattr(usage, "total_token_count", "?"),
-                )
+            log_token_usage(self, response)
 
             parsed = json.loads(response_text)
             return CleanedIdea.model_validate(parsed)
         except (json.JSONDecodeError, ValidationError) as exc:
-            LOGGER.warning("%s returned invalid structured output", self.display_name)
             raise LlmError(
                 f"{self.display_name} returned invalid structured output."
             ) from exc
         except LlmError:
-            LOGGER.warning("%s returned invalid structured output", self.display_name)
             raise
         except Exception as exc:
             LOGGER.exception("%s client call failed: %s", self.display_name, exc)
             raise LlmError(f"{self.display_name} client call failed") from exc
+
+    def get_input_tokens(self, response) -> int | None:
+        """Extract input token count from Gemini response."""
+        usage = getattr(response, "usage_metadata", None)
+        if not usage:
+            return None
+        return getattr(usage, "prompt_token_count", None)
+
+    def get_output_tokens(self, response) -> int | None:
+        """Extract output token count from Gemini response."""
+        usage = getattr(response, "usage_metadata", None)
+        if not usage:
+            return None
+        return getattr(usage, "candidates_token_count", None)
+
+    def get_total_tokens(self, response) -> int | None:
+        """Extract total token count from Gemini response."""
+        usage = getattr(response, "usage_metadata", None)
+        if not usage:
+            return None
+        return getattr(usage, "total_token_count", None)
