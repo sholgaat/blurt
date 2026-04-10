@@ -32,7 +32,7 @@ class IdeaBackendClient:
         payload = {"text": text, "user_id": user_id, "source": source}
 
         try:
-            response = await self.http_client.post("/ideas", json=payload, timeout=15.0)
+            response = await self.http_client.post("/ideas", json=payload, timeout=30.0)
         except httpx.HTTPError as exc:  # pragma: no cover - network errors
             raise BackendConnectionError("Failed to reach backend.") from exc
 
