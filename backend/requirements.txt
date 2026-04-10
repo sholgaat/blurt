@@ -7,3 +7,4 @@ python-dotenv
 google-genai
 openai
 anthropic==0.92.0
+ollama==0.6.1

@@ -1,5 +1,5 @@
 # idea-inbox
-A tool to capture ideas from chat, use Gemini to clean them up, and create GitHub issues automatically.
+A tool to capture ideas from chat, use a configured LLM provider to clean them up, and create GitHub issues automatically.
 
 ## Quickstart (60 Seconds)
 
@@ -49,7 +49,13 @@ GITHUB_REPO_OWNER=your_github_username
 GITHUB_REPO_NAME=your_repository_name
 
 # Required for backend LLM features
+LLM_PROVIDER=gemini
 GEMINI_API_KEY=your_gemini_api_key
+OPENAI_API_KEY=your_openai_api_key
+ANTHROPIC_API_KEY=your_anthropic_api_key
+OLLAMA_API_BASE=http://localhost:11434
+OLLAMA_MODEL=llama3.2
+MODEL_TIMEOUT_SECONDS=30
 
 # Optional: Set to "false" once you have verified your setup works
 DRY_RUN=true
@@ -78,7 +84,13 @@ BACKEND_URL=http://backend:8000
 
 | Variable | Required | Description |
 |---|---|---|
-| `GEMINI_API_KEY` | Yes | API key for Google Gemini, used to structure ideas into title/summary/tags. Get one at [Google AI Studio](https://aistudio.google.com/). |
+| `LLM_PROVIDER` | No | LLM provider to use for structuring ideas (`gemini`, `openai`, `anthropic`, `ollama`). Defaults to `gemini`. |
+| `GEMINI_API_KEY` | Yes (Gemini) | API key for Google Gemini, used to structure ideas into title/summary/tags. Get one at [Google AI Studio](https://aistudio.google.com/). |
+| `OPENAI_API_KEY` | Yes (OpenAI) | API key for OpenAI, used to structure ideas into title/summary/tags. |
+| `ANTHROPIC_API_KEY` | Yes (Anthropic) | API key for Anthropic, used to structure ideas into title/summary/tags. |
+| `OLLAMA_API_BASE` | No | Base URL for the Ollama API (default `http://localhost:11434`). |
+| `OLLAMA_MODEL` | No | Ollama model name to use (default `llama3.2`). |
+| `MODEL_TIMEOUT_SECONDS` | No | Global model timeout in seconds (default `30`). |
 | `GITHUB_TOKEN` | Yes | GitHub Personal Access Token used to create issues. Classic token needs `repo` scope. Fine-grained token needs Issues (read/write) and Labels (read/write) on the target repo. |
 | `GITHUB_REPO_OWNER` | Yes | GitHub username or organisation that owns the target repository. |
 | `GITHUB_REPO_NAME` | Yes | Repository name where ideas will be filed as issues. |
@@ -223,4 +235,3 @@ python -m pytest
 - **Bot runtime** (`bot/main.py`): provider switch (`discord` or `telegram`) based on `BOT_PROVIDER`
 - **Discord bot** (`bot/discord/`): Discord client that forwards messages to the backend
 - **Telegram bot** (`bot/telegram/`): Telegram client that forwards messages to the backend
-
