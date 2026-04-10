@@ -4,10 +4,9 @@ from abc import ABC, abstractmethod
 from typing import Any, ClassVar
 
 from pydantic import BaseModel, field_validator
-from pydantic.json_schema import models_json_schema
-
 
 SYSTEM_INSTRUCTION = "Extract a short descriptive title, a clear concise summary, and 2-7 relevant tags from the user text."
+
 
 class CleanedIdea(BaseModel):
     """Structure returned by LLM cleanup."""
@@ -40,10 +39,6 @@ def _default_tags(tags: list[str]) -> list[str]:
     return unique or ["misc"]
 
 
-# Derive json response schema from pydantic model
-RESPONSE_SCHEMA = models_json_schema([(CleanedIdea, "validation")])[0]
-
-
 class BaseLlmProvider(ABC):
     provider_key: ClassVar[str]
     display_name: ClassVar[str]
@@ -69,7 +64,7 @@ class BaseLlmProvider(ABC):
     @abstractmethod
     def get_total_tokens(self, response: Any) -> int | None:
         """Return total token count or None if unavailable.
-        
+
         Can derive from input+output if not directly exposed.
         """
         raise NotImplementedError

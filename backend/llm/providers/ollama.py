@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import json
-
 from backend.llm.base import (
     BaseLlmProvider,
     CleanedIdea,
     LlmError,
-    RESPONSE_SCHEMA,
     SYSTEM_INSTRUCTION,
 )
 from backend.llm._logging import log_token_usage
@@ -52,7 +49,7 @@ class OllamaLlmProvider(BaseLlmProvider):
             response = await self._client.generate(
                 model=self.model_name,
                 prompt=prompt,
-                format=RESPONSE_SCHEMA,
+                format=CleanedIdea.model_json_schema(),
                 stream=False,
             )
 
@@ -62,8 +59,7 @@ class OllamaLlmProvider(BaseLlmProvider):
 
             log_token_usage(self, response)
 
-            parsed = json.loads(response_text)
-            return CleanedIdea.model_validate(parsed)
+            return CleanedIdea.model_validate_json(response_text)
         except LlmError:
             raise
         except TimeoutError as exc:

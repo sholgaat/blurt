@@ -10,7 +10,6 @@ from backend.llm.base import (
     BaseLlmProvider,
     CleanedIdea,
     LlmError,
-    RESPONSE_SCHEMA,
     SYSTEM_INSTRUCTION,
 )
 from backend.llm._logging import log_token_usage
@@ -40,7 +39,7 @@ class GeminiLlmProvider(BaseLlmProvider):
         config = types.GenerateContentConfig(
             system_instruction=SYSTEM_INSTRUCTION,
             response_mime_type="application/json",
-            response_schema=RESPONSE_SCHEMA,
+            response_schema=CleanedIdea,
         )
 
         try:
@@ -55,7 +54,9 @@ class GeminiLlmProvider(BaseLlmProvider):
 
             log_token_usage(self, response)
 
-            parsed = json.loads(response_text)
+            parsed = getattr(response, "parsed", None)
+            if parsed is None:
+                parsed = json.loads(response_text)
             return CleanedIdea.model_validate(parsed)
         except (json.JSONDecodeError, ValidationError) as exc:
             raise LlmError(

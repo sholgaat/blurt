@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from backend.llm.base import CleanedIdea, LlmError, RESPONSE_SCHEMA
+from backend.llm.base import CleanedIdea, LlmError
 
 
 class FakeResponseError(Exception):
@@ -50,7 +50,7 @@ def test_ollama_cleanup_returns_normalized_idea():
         tags=["dev", "devops"],
     )
     assert provider._client.kwargs["model"] == "llama3.2"
-    assert provider._client.kwargs["format"] == RESPONSE_SCHEMA
+    assert provider._client.kwargs["format"] == CleanedIdea.model_json_schema()
     assert "TEXT:\nsome raw idea" in provider._client.kwargs["prompt"]
     assert "Respond using JSON." in provider._client.kwargs["prompt"]
 
@@ -67,7 +67,9 @@ def test_ollama_cleanup_rejects_empty_response():
 def test_ollama_cleanup_reports_model_not_found():
     from backend.llm.providers.ollama import OllamaLlmProvider
 
-    provider = OllamaLlmProvider(client=FakeOllamaClient(exc=FakeResponseError("not found")))
+    provider = OllamaLlmProvider(
+        client=FakeOllamaClient(exc=FakeResponseError("not found"))
+    )
     provider._response_error_cls = FakeResponseError
 
     with pytest.raises(LlmError, match="could not be found"):
@@ -86,7 +88,9 @@ def test_ollama_cleanup_reports_timeout():
 def test_ollama_cleanup_reports_connection_error():
     from backend.llm.providers.ollama import OllamaLlmProvider
 
-    provider = OllamaLlmProvider(client=FakeOllamaClient(exc=ConnectionError("connection refused")))
+    provider = OllamaLlmProvider(
+        client=FakeOllamaClient(exc=ConnectionError("connection refused"))
+    )
 
     with pytest.raises(LlmError, match="could not be reached"):
         asyncio.run(provider.cleanup("some raw idea"))

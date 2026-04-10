@@ -28,9 +28,10 @@ class FakeGeminiClient:
         )
 
 
-def _response(text: str | None):
+def _response(text: str | None, parsed=None):
     return pytypes.SimpleNamespace(
         text=text,
+        parsed=parsed,
         usage_metadata=pytypes.SimpleNamespace(
             prompt_token_count=11,
             candidates_token_count=7,
@@ -46,7 +47,12 @@ def test_gemini_cleanup_returns_normalized_idea():
         client=FakeGeminiClient(
             response=_response(
                 '{"title": " Build notes ", "summary": " Short summary ", '
-                '"tags": ["Dev", "DevOps", "Dev"]}'
+                '"tags": ["Dev", "DevOps", "Dev"]}',
+                parsed={
+                    "title": " Build notes ",
+                    "summary": " Short summary ",
+                    "tags": ["Dev", "DevOps", "Dev"],
+                },
             )
         )
     )
@@ -63,6 +69,7 @@ def test_gemini_cleanup_returns_normalized_idea():
     assert kwargs["contents"] == "TEXT:\nsome raw idea"
     assert kwargs["config"].system_instruction
     assert kwargs["config"].response_mime_type == "application/json"
+    assert kwargs["config"].response_schema is CleanedIdea
 
 
 def test_gemini_cleanup_requires_api_key(monkeypatch):
