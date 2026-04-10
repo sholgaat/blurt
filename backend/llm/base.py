@@ -9,10 +9,6 @@ from pydantic.json_schema import models_json_schema
 
 SYSTEM_INSTRUCTION = "Extract a short descriptive title, a clear concise summary, and 2-7 relevant tags from the user text."
 
-# RESPONSE_SCHEMA will be set after CleanedIdea is defined (derived from Pydantic model)
-RESPONSE_SCHEMA: dict = {}
-
-
 class CleanedIdea(BaseModel):
     """Structure returned by LLM cleanup."""
 
@@ -44,7 +40,7 @@ def _default_tags(tags: list[str]) -> list[str]:
     return unique or ["misc"]
 
 
-# Now that CleanedIdea is defined, derive RESPONSE_SCHEMA from it
+# Derive json response schema from pydantic model
 RESPONSE_SCHEMA = models_json_schema([(CleanedIdea, "validation")])[0]
 
 

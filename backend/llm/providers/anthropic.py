@@ -1,14 +1,9 @@
 from __future__ import annotations
 
-import asyncio
-import inspect
-import json
 import logging
-from typing import Any
-
-from pydantic import TypeAdapter, ValidationError
 
 from backend.llm.base import BaseLlmProvider, CleanedIdea, LlmError, SYSTEM_INSTRUCTION
+from backend.llm._logging import log_token_usage
 from backend.settings import get_backend_settings
 
 LOGGER = logging.getLogger(__name__)
@@ -41,126 +36,54 @@ class AnthropicLlmProvider(BaseLlmProvider):
 
     async def cleanup(self, raw_note: str) -> CleanedIdea:
         try:
-            messages_client = self._client.messages
-            parse_method = getattr(messages_client, "parse", None)
-
-            if callable(parse_method):
-                return await self._cleanup_with_parse(parse_method, raw_note)
-
-            return await self._cleanup_with_json_schema(messages_client, raw_note)
-        except LlmError:
-            LOGGER.warning("%s returned invalid structured output", self.display_name)
-            raise
-        except Exception as exc:
-            LOGGER.exception("%s client call failed: %s", self.display_name, exc)
-            raise LlmError(f"{self.display_name} client call failed") from exc
-
-    async def _cleanup_with_parse(self, parse_method, raw_note: str) -> CleanedIdea:
-        try:
-            response = await self._call_with_async_safety(
-                parse_method,
+            response = await self._client.messages.parse(
                 max_tokens=1024,
                 model=self.model_name,
                 system=SYSTEM_INSTRUCTION,
                 messages=[{"role": "user", "content": f"TEXT:\n{raw_note}"}],
                 output_format=CleanedIdea,
             )
-        except TypeError:
-            return await self._cleanup_with_json_schema(self._client.messages, raw_note)
 
-        parsed = getattr(response, "parsed_output", None)
-        if parsed is None:
-            raise LlmError(f"{self.display_name} returned an empty response.")
+            parsed = getattr(response, "parsed_output", None)
+            if parsed is None:
+                raise LlmError(f"{self.display_name} returned an empty response.")
 
+            log_token_usage(self, response)
+            return parsed
+        except LlmError:
+            raise
+        except Exception as exc:
+            LOGGER.exception("%s client call failed: %s", self.display_name, exc)
+            raise LlmError(f"{self.display_name} client call failed") from exc
+
+    def get_input_tokens(self, response) -> int | str:
+        """Extract input token count from Anthropic response."""
         usage = getattr(response, "usage", None)
-        if usage:
-            total = getattr(usage, "total_tokens", "?")
-            if total == "?":
-                input_tokens = getattr(usage, "input_tokens", 0) or 0
-                output_tokens = getattr(usage, "output_tokens", 0) or 0
-                total = input_tokens + output_tokens
+        if not usage:
+            return "?"
+        return getattr(usage, "input_tokens", "?")
 
-            LOGGER.info(
-                "%s usage - prompt: %s tokens, completion: %s tokens, total: %s tokens",
-                self.display_name,
-                getattr(usage, "input_tokens", "?"),
-                getattr(usage, "output_tokens", "?"),
-                total,
-            )
-
-        try:
-            return CleanedIdea.model_validate(parsed)
-        except ValidationError as exc:
-            raise LlmError(f"{self.display_name} returned invalid structured output.") from exc
-
-    async def _cleanup_with_json_schema(self, messages_client, raw_note: str) -> CleanedIdea:
-        adapter = TypeAdapter(CleanedIdea)
-        schema = adapter.json_schema()
-
-        transformed_schema = schema
-        try:
-            from anthropic.lib._parse._transform import transform_schema
-
-            transformed_schema = transform_schema(schema)
-        except Exception:
-            LOGGER.debug("Using untransformed JSON schema for %s fallback", self.display_name)
-
-        response = await self._call_with_async_safety(
-            messages_client.create,
-            max_tokens=1024,
-            model=self.model_name,
-            system=SYSTEM_INSTRUCTION,
-            messages=[{"role": "user", "content": f"TEXT:\n{raw_note}"}],
-            output_config={
-                "format": {
-                    "type": "json_schema",
-                    "schema": transformed_schema,
-                }
-            },
-        )
-
-        response_text = self._extract_text_response(response)
-        if not response_text.strip():
-            raise LlmError(f"{self.display_name} returned an empty response.")
-
+    def get_output_tokens(self, response) -> int | str:
+        """Extract output token count from Anthropic response."""
         usage = getattr(response, "usage", None)
-        if usage:
-            total = getattr(usage, "total_tokens", "?")
-            if total == "?":
-                input_tokens = getattr(usage, "input_tokens", 0) or 0
-                output_tokens = getattr(usage, "output_tokens", 0) or 0
-                total = input_tokens + output_tokens
+        if not usage:
+            return "?"
+        return getattr(usage, "output_tokens", "?")
 
-            LOGGER.info(
-                "%s usage - prompt: %s tokens, completion: %s tokens, total: %s tokens",
-                self.display_name,
-                getattr(usage, "input_tokens", "?"),
-                getattr(usage, "output_tokens", "?"),
-                total,
-            )
+    def get_total_tokens(self, response) -> int | str:
+        """Extract or derive total token count from Anthropic response."""
+        usage = getattr(response, "usage", None)
+        if not usage:
+            return "?"
 
-        try:
-            parsed = json.loads(response_text)
-            return CleanedIdea.model_validate(parsed)
-        except (json.JSONDecodeError, ValidationError) as exc:
-            raise LlmError(f"{self.display_name} returned invalid structured output.") from exc
+        total = getattr(usage, "total_tokens", None)
+        if total is not None:
+            return total
 
-    async def _call_with_async_safety(self, method, **kwargs):
-        if inspect.iscoroutinefunction(method):
-            return await method(**kwargs)
-        return await asyncio.to_thread(method, **kwargs)
+        # Derive from input + output if total not available
+        input_tokens = getattr(usage, "input_tokens", None)
+        output_tokens = getattr(usage, "output_tokens", None)
+        if input_tokens is not None and output_tokens is not None:
+            return input_tokens + output_tokens
 
-    def _extract_text_response(self, response: Any) -> str:
-        content = getattr(response, "content", None)
-        if not content:
-            return ""
-
-        text_parts: list[str] = []
-        for block in content:
-            if getattr(block, "type", "") != "text":
-                continue
-            text_value = getattr(block, "text", "")
-            if text_value:
-                text_parts.append(text_value)
-
-        return "\n".join(text_parts)
+        return "?"
