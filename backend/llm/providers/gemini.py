@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 
@@ -25,9 +24,13 @@ class GeminiLlmProvider(BaseLlmProvider):
     display_name = "Gemini"
     default_model_name = "gemini-2.5-flash-lite"
 
-    def __init__(self, model_name: str | None = None) -> None:
+    def __init__(
+        self,
+        model_name: str | None = None,
+        client: object | None = None,
+    ) -> None:
         super().__init__(model_name=model_name)
-        self._client = self._create_client()
+        self._client = client or self._create_client()
 
     def _create_client(self) -> genai.Client:
         api_key = get_backend_settings().gemini_api_key
@@ -42,15 +45,12 @@ class GeminiLlmProvider(BaseLlmProvider):
             response_schema=RESPONSE_SCHEMA,
         )
 
-        def _invoke_model() -> types.GenerateContentResponse:
-            return self._client.models.generate_content(
+        try:
+            response = await self._client.aio.models.generate_content(
                 model=self.model_name,
                 contents=f"TEXT:\n{raw_note}",
                 config=config,
             )
-
-        try:
-            response = await asyncio.to_thread(_invoke_model)
             response_text = response.text or ""
             if not response_text.strip():
                 raise LlmError(f"{self.display_name} returned an empty response.")
