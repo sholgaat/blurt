@@ -15,6 +15,23 @@ docker compose logs -f backend
 docker compose logs -f bot
 ```
 
+Optional Ollama add-on:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.ollama.yml up -d
+docker compose exec ollama ollama pull tinyllama
+```
+
+The `ollama-data` volume persists downloaded models across container restarts.
+
+To use Ollama, set these in `.env.backend`:
+
+```bash
+LLM_PROVIDER=ollama
+OLLAMA_API_BASE=http://ollama:11434
+OLLAMA_MODEL=tinyllama
+```
+
 The setup script copies the example env files, prompts for every required value with a short explanation, and writes them in place. It defaults `DRY_RUN=true` so no real GitHub issues are created on the first run.
 
 In Docker Compose, the backend is internal-only (`http://backend:8000`) and not exposed to the host. See the comment in `docker-compose.yml` for details.
