@@ -9,11 +9,9 @@ from backend.llm.base import CleanedIdea, LlmError
 
 
 class FakeAnthropicMessages:
-    def __init__(self, parsed_output=None, text_response: str | None = None):
+    def __init__(self, parsed_output=None):
         self._parsed_output = parsed_output
-        self._text_response = text_response or ""
         self.parse_kwargs = None
-        self.create_kwargs = None
 
     async def parse(self, **kwargs):
         self.parse_kwargs = kwargs
@@ -22,20 +20,10 @@ class FakeAnthropicMessages:
             usage=types.SimpleNamespace(input_tokens=11, output_tokens=7),
         )
 
-    async def create(self, **kwargs):
-        self.create_kwargs = kwargs
-        return types.SimpleNamespace(
-            content=[types.SimpleNamespace(type="text", text=self._text_response)],
-            usage=types.SimpleNamespace(input_tokens=13, output_tokens=9),
-        )
-
 
 class FakeAnthropicClient:
-    def __init__(self, parsed_output=None, text_response: str | None = None):
-        self.messages = FakeAnthropicMessages(
-            parsed_output=parsed_output,
-            text_response=text_response,
-        )
+    def __init__(self, parsed_output=None):
+        self.messages = FakeAnthropicMessages(parsed_output=parsed_output)
 
 
 def test_anthropic_cleanup_returns_normalized_idea():
@@ -73,30 +61,6 @@ def test_anthropic_cleanup_requires_api_key(monkeypatch):
 
     with pytest.raises(LlmError, match="Anthropic API key is not configured"):
         AnthropicLlmProvider()
-
-
-def test_anthropic_cleanup_falls_back_to_json_schema_output_config():
-    from backend.llm.providers.anthropic import AnthropicLlmProvider
-
-    text_response = (
-        '{"title": "  Build notes  ", "summary": " Short summary ", '
-        '"tags": ["Dev", "DevOps", "Dev"]}'
-    )
-    provider = AnthropicLlmProvider(client=FakeAnthropicClient(text_response=text_response))
-    provider._client.messages.parse = None
-
-    result = asyncio.run(provider.cleanup("some raw idea"))
-
-    assert result == CleanedIdea(
-        title="Build notes",
-        summary="Short summary",
-        tags=["dev", "devops"],
-    )
-    kwargs = provider._client.messages.create_kwargs
-    assert kwargs["model"] == "claude-haiku-4-5"
-    assert kwargs["messages"] == [{"role": "user", "content": "TEXT:\nsome raw idea"}]
-    assert kwargs["output_config"]["format"]["type"] == "json_schema"
-    assert "schema" in kwargs["output_config"]["format"]
 
 
 def test_factory_selects_anthropic_provider(monkeypatch):

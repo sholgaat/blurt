@@ -1,12 +1,8 @@
 from __future__ import annotations
 
-import logging
-
 from backend.llm.base import BaseLlmProvider, CleanedIdea, LlmError, SYSTEM_INSTRUCTION
 from backend.llm._logging import log_token_usage
 from backend.settings import get_backend_settings
-
-LOGGER = logging.getLogger(__name__)
 
 
 class AnthropicLlmProvider(BaseLlmProvider):
@@ -53,37 +49,26 @@ class AnthropicLlmProvider(BaseLlmProvider):
         except LlmError:
             raise
         except Exception as exc:
-            LOGGER.exception("%s client call failed: %s", self.display_name, exc)
             raise LlmError(f"{self.display_name} client call failed") from exc
 
-    def get_input_tokens(self, response) -> int | str:
+    def get_input_tokens(self, response) -> int | None:
         """Extract input token count from Anthropic response."""
         usage = getattr(response, "usage", None)
         if not usage:
-            return "?"
-        return getattr(usage, "input_tokens", "?")
+            return None
+        return getattr(usage, "input_tokens", None)
 
-    def get_output_tokens(self, response) -> int | str:
+    def get_output_tokens(self, response) -> int | None:
         """Extract output token count from Anthropic response."""
         usage = getattr(response, "usage", None)
         if not usage:
-            return "?"
-        return getattr(usage, "output_tokens", "?")
+            return None
+        return getattr(usage, "output_tokens", None)
 
-    def get_total_tokens(self, response) -> int | str:
+    def get_total_tokens(self, response) -> int | None:
         """Extract or derive total token count from Anthropic response."""
         usage = getattr(response, "usage", None)
         if not usage:
-            return "?"
+            return None
 
-        total = getattr(usage, "total_tokens", None)
-        if total is not None:
-            return total
-
-        # Derive from input + output if total not available
-        input_tokens = getattr(usage, "input_tokens", None)
-        output_tokens = getattr(usage, "output_tokens", None)
-        if input_tokens is not None and output_tokens is not None:
-            return input_tokens + output_tokens
-
-        return "?"
+        return getattr(usage, "total_tokens", None)

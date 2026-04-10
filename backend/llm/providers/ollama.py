@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import logging
 
 from backend.llm.base import (
     BaseLlmProvider,
@@ -12,8 +11,6 @@ from backend.llm.base import (
 )
 from backend.llm._logging import log_token_usage
 from backend.settings import get_backend_settings
-
-LOGGER = logging.getLogger(__name__)
 
 
 class OllamaLlmProvider(BaseLlmProvider):
@@ -48,9 +45,7 @@ class OllamaLlmProvider(BaseLlmProvider):
 
     async def cleanup(self, raw_note: str) -> CleanedIdea:
         prompt = (
-            f"{SYSTEM_INSTRUCTION}\n\n"
-            f"TEXT:\n{raw_note}\n\n"
-            "Respond using JSON."
+            f"{SYSTEM_INSTRUCTION}\n\n" f"TEXT:\n{raw_note}\n\n" "Respond using JSON."
         )
 
         try:
@@ -71,31 +66,22 @@ class OllamaLlmProvider(BaseLlmProvider):
             return CleanedIdea.model_validate(parsed)
         except LlmError:
             raise
+        except TimeoutError as exc:
+            raise LlmError(
+                f"{self.display_name} request timed out - the model {self.model_name!r} may require more time to load or respond"
+            ) from exc
+        except ConnectionError as exc:
+            raise LlmError(
+                f"{self.display_name} could not be reached at {self.api_base} - ensure it is running and the address is correct"
+            ) from exc
+        except self._response_error_cls as exc:
+            error_msg = str(getattr(exc, "error", "") or str(exc))
+            if "not found" in error_msg.lower():
+                raise LlmError(
+                    f"{self.display_name} model '{self.model_name}' could not be found - ensure it has been pulled"
+                ) from exc
+            raise LlmError(f"{self.display_name} error: {error_msg}") from exc
         except Exception as exc:
-            if isinstance(exc, self._response_error_cls):
-                error_msg = str(getattr(exc, "error", "") or str(exc))
-                if "not found" in error_msg.lower():
-                    raise LlmError(
-                        f"Model '{self.model_name}' could not be found - ensure it has been pulled"
-                    ) from exc
-                raise LlmError(f"{self.display_name} error: {error_msg}") from exc
-
-            error_msg = str(exc).lower()
-            if "timeout" in error_msg:
-                raise LlmError(
-                    "Ollama request timed out - the model may require more time to load or respond"
-                ) from exc
-            if (
-                "connect" in error_msg
-                or "connection" in error_msg
-                or "refused" in error_msg
-                or "unreachable" in error_msg
-            ):
-                raise LlmError(
-                    f"Ollama could not be reached at {self.api_base} - ensure it is running and the address is correct"
-                ) from exc
-
-            LOGGER.exception("%s client call failed: %s", self.display_name, exc)
             raise LlmError(f"{self.display_name} client call failed") from exc
 
     def get_input_tokens(self, response) -> int | None:

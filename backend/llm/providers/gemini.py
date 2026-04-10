@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import logging
 
 from google import genai
 from google.genai import types
@@ -16,8 +15,6 @@ from backend.llm.base import (
 )
 from backend.llm._logging import log_token_usage
 from backend.settings import get_backend_settings
-
-LOGGER = logging.getLogger(__name__)
 
 
 class GeminiLlmProvider(BaseLlmProvider):
@@ -67,7 +64,6 @@ class GeminiLlmProvider(BaseLlmProvider):
         except LlmError:
             raise
         except Exception as exc:
-            LOGGER.exception("%s client call failed: %s", self.display_name, exc)
             raise LlmError(f"{self.display_name} client call failed") from exc
 
     def get_input_tokens(self, response) -> int | None:
