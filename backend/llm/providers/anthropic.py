@@ -17,7 +17,7 @@ LOGGER = logging.getLogger(__name__)
 class AnthropicLlmProvider(BaseLlmProvider):
     provider_key = "anthropic"
     display_name = "Anthropic"
-    default_model_name = "claude-3-5-haiku"
+    default_model_name = "claude-haiku-4-5"
 
     def __init__(
         self,

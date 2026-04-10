@@ -56,7 +56,7 @@ def test_anthropic_cleanup_returns_normalized_idea():
     )
     assert provider._client.messages.parse_kwargs == {
         "max_tokens": 1024,
-        "model": "claude-3-5-haiku",
+        "model": "claude-haiku-4-5",
         "system": "Extract a short descriptive title, a clear concise summary, and 2-7 relevant tags from the user text.",
         "messages": [{"role": "user", "content": "TEXT:\nsome raw idea"}],
         "output_format": CleanedIdea,
@@ -93,7 +93,7 @@ def test_anthropic_cleanup_falls_back_to_json_schema_output_config():
         tags=["dev", "devops"],
     )
     kwargs = provider._client.messages.create_kwargs
-    assert kwargs["model"] == "claude-3-5-haiku"
+    assert kwargs["model"] == "claude-haiku-4-5"
     assert kwargs["messages"] == [{"role": "user", "content": "TEXT:\nsome raw idea"}]
     assert kwargs["output_config"]["format"]["type"] == "json_schema"
     assert "schema" in kwargs["output_config"]["format"]
@@ -108,7 +108,7 @@ def test_factory_selects_anthropic_provider(monkeypatch):
         def __init__(self):
             self.display_name = "Anthropic"
             self.provider_key = "anthropic"
-            self.model_name = "claude-3-5-haiku"
+            self.model_name = "claude-haiku-4-5"
 
     factory_module.get_llm_provider.cache_clear()
 
