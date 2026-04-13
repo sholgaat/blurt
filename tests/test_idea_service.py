@@ -1,11 +1,11 @@
 import pytest
 
-from bot.shared.backend_client import (
+from bot.backend_client import (
     BackendConnectionError,
     BackendResponseError,
     BackendTimeoutError,
 )
-from bot.shared.idea_service import summarise_idea
+from bot.idea_service import summarise_idea
 from tests.conftest import FakeBackend
 
 

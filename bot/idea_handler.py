@@ -3,9 +3,9 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from bot.shared.backend_client import IdeaBackendClient
-from bot.shared.bot_connector import MessageEnvelope
-from bot.shared.idea_service import (
+from bot.backend_client import IdeaBackendClient
+from bot.connector.bot_connector import MessageEnvelope
+from bot.idea_service import (
     EMPTY_IDEA_MSG,
     MAX_IDEA_LENGTH,
     TOO_LONG_IDEA_MSG,

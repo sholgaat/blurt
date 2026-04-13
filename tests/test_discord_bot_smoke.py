@@ -1,10 +1,11 @@
 import asyncio
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import discord
 import pytest
 
-from bot.connectors.discord_connector import DiscordConnector
+from bot.connector.discord_connector import DiscordConnector
 
 
 _ALLOWED_USER_ID = 111
@@ -17,6 +18,41 @@ def _make_connector(*, idea_channel_id: int | None = None) -> DiscordConnector:
         "token",
         idea_channel_id=str(idea_channel_id) if idea_channel_id is not None else "",
     )
+
+
+def test_validate_config_warns_when_channel_id_is_missing(caplog):
+    with caplog.at_level("WARNING", logger="bot.connector.discord_connector"):
+        DiscordConnector.validate_config(
+            SimpleNamespace(
+                discord_bot_token="token",
+                discord_allowed_user_ids={"111"},
+                discord_idea_channel_id="",
+            )
+        )
+
+    assert any("DISCORD_IDEA_CHANNEL_ID" in record.message for record in caplog.records)
+
+
+def test_validate_config_raises_when_token_missing():
+    with pytest.raises(RuntimeError, match="DISCORD_BOT_TOKEN"):
+        DiscordConnector.validate_config(
+            SimpleNamespace(
+                discord_bot_token="",
+                discord_allowed_user_ids={"111"},
+                discord_idea_channel_id="42",
+            )
+        )
+
+
+def test_validate_config_raises_when_allowed_users_missing():
+    with pytest.raises(RuntimeError, match="DISCORD_ALLOWED_USER_IDS"):
+        DiscordConnector.validate_config(
+            SimpleNamespace(
+                discord_bot_token="token",
+                discord_allowed_user_ids=set(),
+                discord_idea_channel_id="42",
+            )
+        )
 
 
 def _patch_connector_user(connector: DiscordConnector, user: MagicMock):

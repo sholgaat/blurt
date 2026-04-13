@@ -22,6 +22,11 @@ class BotConnector(ABC):
     def register_message_handler(self, handler: MessageHandler) -> None:
         self._message_handler = handler
 
+    @classmethod
+    @abstractmethod
+    def validate_config(cls, cfg) -> None:
+        raise NotImplementedError
+
     @abstractmethod
     def start(self) -> None:
         raise NotImplementedError

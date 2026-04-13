@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from bot.shared.backend_client import (
+from bot.backend_client import (
     BackendConnectionError,
     BackendTimeoutError,
     BackendResponseError,

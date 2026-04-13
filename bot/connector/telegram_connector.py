@@ -3,10 +3,20 @@ from __future__ import annotations
 from telegram import Update
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
 
-from bot.shared.bot_connector import BotConnector, MessageEnvelope
+from bot.connector.bot_connector import BotConnector, MessageEnvelope
 
 
 class TelegramConnector(BotConnector):
+    @classmethod
+    def validate_config(cls, cfg) -> None:
+        if not cfg.telegram_bot_token:
+            raise RuntimeError("TELEGRAM_BOT_TOKEN is not set in the environment.")
+        if not cfg.telegram_allowed_user_ids:
+            raise RuntimeError(
+                "TELEGRAM_ALLOWED_USER_IDS is not set in the environment. "
+                "Provide a comma-separated list of Telegram user IDs that are allowed to submit ideas."
+            )
+
     def __init__(self, token: str):
         super().__init__()
         self._token = token

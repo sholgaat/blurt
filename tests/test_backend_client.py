@@ -1,7 +1,7 @@
 import httpx
 import pytest
 
-from bot.shared.backend_client import (
+from bot.backend_client import (
     BackendConnectionError,
     BackendResponseError,
     BackendTimeoutError,

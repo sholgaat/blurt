@@ -1,11 +1,13 @@
 import asyncio
+from types import SimpleNamespace
 
 import pytest
 
-from bot.shared.backend_client import BackendConnectionError, BackendResponseError
-from bot.shared.bot_connector import MessageEnvelope
-from bot.shared.idea_handler import IdeaHandler
-from bot.shared.idea_service import MAX_IDEA_LENGTH
+from bot.connector.telegram_connector import TelegramConnector
+from bot.backend_client import BackendConnectionError, BackendResponseError
+from bot.connector.bot_connector import MessageEnvelope
+from bot.idea_handler import IdeaHandler
+from bot.idea_service import MAX_IDEA_LENGTH
 from tests.conftest import FakeBackend
 
 
@@ -32,6 +34,26 @@ def _make_handler(
         source="telegram",
         backend_timeout=30,
     )
+
+
+def test_validate_config_raises_when_token_missing():
+    with pytest.raises(RuntimeError, match="TELEGRAM_BOT_TOKEN"):
+        TelegramConnector.validate_config(
+            SimpleNamespace(
+                telegram_bot_token="",
+                telegram_allowed_user_ids={"42"},
+            )
+        )
+
+
+def test_validate_config_raises_when_allowed_users_missing():
+    with pytest.raises(RuntimeError, match="TELEGRAM_ALLOWED_USER_IDS"):
+        TelegramConnector.validate_config(
+            SimpleNamespace(
+                telegram_bot_token="token",
+                telegram_allowed_user_ids=set(),
+            )
+        )
 
 
 @pytest.mark.asyncio
