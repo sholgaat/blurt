@@ -11,6 +11,10 @@ class BackendResponseError(Exception):
     """Raised when the backend responds with an error status."""
 
 
+class BackendTimeoutError(Exception):
+    """Raised when the backend request times out."""
+
+
 class IdeaBackendClient:
     def __init__(self, base_url: str):
         self.base_url = base_url
@@ -25,14 +29,22 @@ class IdeaBackendClient:
             await self.http_client.aclose()
             self.http_client = None
 
-    async def create_idea(self, text: str, user_id: str, source: str) -> dict:
+    async def create_idea(
+        self,
+        text: str,
+        user_id: str,
+        source: str,
+        timeout: float = 30.0,
+    ) -> dict:
         if not self.http_client:
             await self.start()
 
         payload = {"text": text, "user_id": user_id, "source": source}
 
         try:
-            response = await self.http_client.post("/ideas", json=payload, timeout=30.0)
+            response = await self.http_client.post("/ideas", json=payload, timeout=timeout)
+        except httpx.TimeoutException as exc:  # pragma: no cover - network errors
+            raise BackendTimeoutError("Backend request timed out.") from exc
         except httpx.HTTPError as exc:  # pragma: no cover - network errors
             raise BackendConnectionError("Failed to reach backend.") from exc
 

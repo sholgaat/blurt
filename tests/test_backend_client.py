@@ -4,6 +4,7 @@ import pytest
 from bot.shared.backend_client import (
     BackendConnectionError,
     BackendResponseError,
+    BackendTimeoutError,
     IdeaBackendClient,
 )
 
@@ -55,6 +56,22 @@ async def test_create_idea_raises_response_error(monkeypatch):
     monkeypatch.setattr(backend.http_client, "post", fake_post)
 
     with pytest.raises(BackendResponseError):
+        await backend.create_idea("hello", "u1", "telegram")
+
+    await backend.http_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_create_idea_raises_timeout_error(monkeypatch):
+    backend = IdeaBackendClient("http://example.com")
+
+    async def fake_post(*args, **kwargs):
+        raise httpx.TimeoutException("slow")
+
+    backend.http_client = httpx.AsyncClient(base_url=backend.base_url)
+    monkeypatch.setattr(backend.http_client, "post", fake_post)
+
+    with pytest.raises(BackendTimeoutError):
         await backend.create_idea("hello", "u1", "telegram")
 
     await backend.http_client.aclose()

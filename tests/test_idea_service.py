@@ -1,6 +1,10 @@
 import pytest
 
-from bot.shared.backend_client import BackendConnectionError, BackendResponseError
+from bot.shared.backend_client import (
+    BackendConnectionError,
+    BackendResponseError,
+    BackendTimeoutError,
+)
 from bot.shared.idea_service import submit_idea
 from tests.conftest import FakeBackend
 
@@ -24,6 +28,13 @@ async def test_submit_idea_backend_response_error():
     backend = FakeBackend(BackendResponseError("bad"))
     reply = await submit_idea(backend, text="text", user_id="1", source="discord")
     assert "went wrong" in reply
+
+
+@pytest.mark.asyncio
+async def test_submit_idea_backend_timeout_error():
+    backend = FakeBackend(BackendTimeoutError("slow"))
+    reply = await submit_idea(backend, text="text", user_id="1", source="discord")
+    assert "longer than expected" in reply
 
 
 @pytest.mark.asyncio

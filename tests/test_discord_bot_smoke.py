@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
@@ -107,10 +108,11 @@ async def test_dm_from_allowed_user_is_processed():
 
     with _patch_bot_user(bot, _DIFFERENT_USER):
         await bot.on_message(message)
+        await asyncio.sleep(0)
 
     assert backend.called_with == ("My idea", str(_ALLOWED_USER_ID), "discord")
-    message.reply.assert_awaited_once()
-    reply_text = message.reply.call_args[0][0]
+    assert message.reply.await_count == 2
+    reply_text = message.reply.await_args_list[1].args[0]
     assert "Test Idea" in reply_text
     assert "http://example.com/idea" in reply_text
 
@@ -128,6 +130,7 @@ async def test_dm_from_blocked_user_is_rejected():
 
     with _patch_bot_user(bot, _DIFFERENT_USER):
         await bot.on_message(message)
+        await asyncio.sleep(0)
 
     assert backend.called_with is None
     message.reply.assert_awaited_once()
@@ -168,6 +171,7 @@ async def test_guild_channel_matching_id_is_processed():
 
     with _patch_bot_user(bot, _DIFFERENT_USER):
         await bot.on_message(message)
+        await asyncio.sleep(0)
 
     assert backend.called_with is not None
     assert backend.called_with[2] == "discord"
@@ -181,6 +185,7 @@ async def test_guild_channel_non_matching_id_is_ignored():
 
     with _patch_bot_user(bot, _DIFFERENT_USER):
         await bot.on_message(message)
+        await asyncio.sleep(0)
 
     assert backend.called_with is None
     message.reply.assert_not_awaited()
@@ -199,6 +204,7 @@ async def test_guild_message_ignored_when_no_channel_id_configured():
 
     with _patch_bot_user(bot, _DIFFERENT_USER):
         await bot.on_message(message)
+        await asyncio.sleep(0)
 
     assert backend.called_with is None
     message.reply.assert_not_awaited()
@@ -212,6 +218,7 @@ async def test_dm_still_processed_when_no_channel_id_configured():
 
     with _patch_bot_user(bot, _DIFFERENT_USER):
         await bot.on_message(message)
+        await asyncio.sleep(0)
 
     assert backend.called_with is not None
 
@@ -260,9 +267,10 @@ async def test_backend_connection_error_replies_gracefully():
 
     with _patch_bot_user(bot, _DIFFERENT_USER):
         await bot.on_message(message)
+        await asyncio.sleep(0)
 
-    message.reply.assert_awaited_once()
-    assert "backend" in message.reply.call_args[0][0].lower()
+    assert message.reply.await_count == 2
+    assert "backend" in message.reply.await_args_list[1].args[0].lower()
 
 @pytest.mark.asyncio
 async def test_backend_response_error_replies_gracefully():
@@ -272,9 +280,10 @@ async def test_backend_response_error_replies_gracefully():
 
     with _patch_bot_user(bot, _DIFFERENT_USER):
         await bot.on_message(message)
+        await asyncio.sleep(0)
 
-    message.reply.assert_awaited_once()
-    assert "went wrong" in message.reply.call_args[0][0].lower()
+    assert message.reply.await_count == 2
+    assert "went wrong" in message.reply.await_args_list[1].args[0].lower()
 
 
 # ---------------------------------------------------------------------------
@@ -290,10 +299,11 @@ async def test_empty_message_is_rejected():
 
     with _patch_bot_user(bot, _DIFFERENT_USER):
         await bot.on_message(message)
+        await asyncio.sleep(0)
 
     assert backend.called_with is None
-    message.reply.assert_awaited_once()
-    assert "send me your idea" in message.reply.call_args[0][0].lower()
+    assert message.reply.await_count == 1
+    assert "send me your idea" in message.reply.await_args_list[0].args[0].lower()
 
 
 @pytest.mark.asyncio
@@ -304,11 +314,12 @@ async def test_too_long_message_is_rejected():
 
     with _patch_bot_user(bot, _DIFFERENT_USER):
         await bot.on_message(message)
+        await asyncio.sleep(0)
 
     assert backend.called_with is None
-    message.reply.assert_awaited_once()
+    assert message.reply.await_count == 1
     assert (
-        message.reply.call_args[0][0]
+        message.reply.await_args_list[0].args[0]
         == f"That message is too long (max {MAX_IDEA_LENGTH} characters). Try summarising it a bit."
     )
 
@@ -321,5 +332,6 @@ async def test_message_at_max_length_is_accepted():
 
     with _patch_bot_user(bot, _DIFFERENT_USER):
         await bot.on_message(message)
+        await asyncio.sleep(0)
 
     assert backend.called_with is not None

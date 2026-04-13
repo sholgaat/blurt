@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 
 from bot.telegram.main import handle_message
@@ -31,10 +33,12 @@ async def test_handle_message_calls_backend_and_replies():
     backend = FakeBackend()
     update = DummyUpdate(DummyMessage("An idea"), DummyUser(42))
 
-    await handle_message(backend, {"42"}, update)
+    await handle_message(backend, {"42"}, update, None)
+    await asyncio.sleep(0)
 
     assert backend.called_with == ("An idea", "42", "telegram")
     assert update.message.replies == [
+        "📝 Got it, processing your idea...",
         "Idea captured — Test Idea\n\nA test idea summary.\n\nTags: test · idea\n\nhttp://example.com/idea"
     ]
 
@@ -44,7 +48,7 @@ async def test_handle_message_returns_early_when_no_message():
     backend = FakeBackend()
     update = DummyUpdate(None, DummyUser(42))
 
-    await handle_message(backend, {"42"}, update)
+    await handle_message(backend, {"42"}, update, None)
 
     assert backend.called_with is None
 
@@ -54,7 +58,7 @@ async def test_handle_message_returns_early_when_no_user():
     backend = FakeBackend()
     update = DummyUpdate(DummyMessage("An idea"), None)
 
-    await handle_message(backend, {"42"}, update)
+    await handle_message(backend, {"42"}, update, None)
 
     assert backend.called_with is None
 
@@ -64,9 +68,11 @@ async def test_handle_message_backend_connection_error():
     backend = FakeBackend(BackendConnectionError("down"))
     update = DummyUpdate(DummyMessage("An idea"), DummyUser(42))
 
-    await handle_message(backend, {"42"}, update)
+    await handle_message(backend, {"42"}, update, None)
+    await asyncio.sleep(0)
 
     assert update.message.replies == [
+        "📝 Got it, processing your idea...",
         "Couldn't reach the backend right now — please try again shortly."
     ]
 
@@ -76,9 +82,11 @@ async def test_handle_message_backend_response_error():
     backend = FakeBackend(BackendResponseError("bad"))
     update = DummyUpdate(DummyMessage("An idea"), DummyUser(42))
 
-    await handle_message(backend, {"42"}, update)
+    await handle_message(backend, {"42"}, update, None)
+    await asyncio.sleep(0)
 
     assert update.message.replies == [
+        "📝 Got it, processing your idea...",
         "Something went wrong saving that idea — please try again."
     ]
 
@@ -88,7 +96,7 @@ async def test_handle_message_blocks_unapproved_user():
     backend = FakeBackend()
     update = DummyUpdate(DummyMessage("Idea text"), DummyUser(999))
 
-    await handle_message(backend, {"42"}, update)
+    await handle_message(backend, {"42"}, update, None)
 
     assert backend.called_with is None
     assert update.message.replies == [
@@ -102,7 +110,7 @@ async def test_handle_message_rejects_empty_message():
     backend = FakeBackend()
     update = DummyUpdate(DummyMessage("   "), DummyUser(42))
 
-    await handle_message(backend, {"42"}, update)
+    await handle_message(backend, {"42"}, update, None)
 
     assert backend.called_with is None
     assert update.message.replies == ["Send me your idea as a message and I'll log it."]
@@ -113,7 +121,7 @@ async def test_handle_message_rejects_too_long_message():
     backend = FakeBackend()
     update = DummyUpdate(DummyMessage("x" * 4097), DummyUser(42))
 
-    await handle_message(backend, {"42"}, update)
+    await handle_message(backend, {"42"}, update, None)
 
     assert backend.called_with is None
     assert update.message.replies == [
@@ -126,6 +134,7 @@ async def test_handle_message_accepts_message_at_max_length():
     backend = FakeBackend()
     update = DummyUpdate(DummyMessage("x" * 4096), DummyUser(42))
 
-    await handle_message(backend, {"42"}, update)
+    await handle_message(backend, {"42"}, update, None)
+    await asyncio.sleep(0)
 
     assert backend.called_with is not None

@@ -33,7 +33,13 @@ class FakeBackend(IdeaBackendClient):
     async def close(self) -> None:
         pass
 
-    async def create_idea(self, text: str, user_id: str, source: str) -> dict:
+    async def create_idea(
+        self,
+        text: str,
+        user_id: str,
+        source: str,
+        timeout: float | None = None,
+    ) -> dict:
         self.called_with = (text, user_id, source)
         if isinstance(self.response, Exception):
             raise self.response

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from functools import partial
 
 from telegram import Update
-from telegram.ext import Application, ContextTypes, MessageHandler, filters
+from telegram.ext import Application, MessageHandler, filters
 
 from bot.shared.backend_client import IdeaBackendClient
 from bot.shared.idea_service import (
@@ -23,6 +24,7 @@ async def handle_message(
     backend_client: IdeaBackendClient,
     allowed_user_ids: set[str],
     update: Update,
+    idea_creation_timeout: int = 30,
 ) -> None:
     if not update.message or not update.effective_user:
         return
@@ -45,13 +47,37 @@ async def handle_message(
         await update.message.reply_text(TOO_LONG_IDEA_MSG)
         return
 
-    reply = await submit_idea(
-        backend_client,
-        text=text,
-        user_id=user_id,
-        source="telegram",
+    await update.message.reply_text("📝 Got it, processing your idea...")
+    asyncio.create_task(
+        process_and_send_update(
+            backend_client=backend_client,
+            update=update,
+            text=text,
+            user_id=user_id,
+            timeout=idea_creation_timeout,
+        )
     )
-    await update.message.reply_text(reply)
+
+
+async def process_and_send_update(
+    *,
+    backend_client: IdeaBackendClient,
+    update: Update,
+    text: str,
+    user_id: str,
+    timeout: int,
+) -> None:
+    try:
+        reply = await submit_idea(
+            backend_client,
+            text=text,
+            user_id=user_id,
+            source="telegram",
+            timeout=timeout,
+        )
+        await update.message.reply_text(reply)
+    except Exception:
+        logger.exception("Failed to process or send Telegram idea update")
 
 
 def main() -> None:
@@ -79,7 +105,12 @@ def main() -> None:
     application.add_handler(
         MessageHandler(
             filters.TEXT & ~filters.COMMAND,
-            partial(handle_message, backend_client, cfg.telegram_allowed_user_ids),
+            partial(
+                handle_message,
+                backend_client,
+                cfg.telegram_allowed_user_ids,
+                idea_creation_timeout=cfg.idea_creation_timeout,
+            ),
         )
     )
 

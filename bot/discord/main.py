@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 
 import discord
@@ -26,11 +27,13 @@ class IdeaInboxBot(discord.Client):
         backend_client: IdeaBackendClient,
         allowed_user_ids: set[str],
         idea_channel_id: str,
+        idea_creation_timeout: int = 30,
     ):
         super().__init__(intents=intents)
         self.backend_client = backend_client
         self.allowed_user_ids = allowed_user_ids
         self.idea_channel_id = idea_channel_id
+        self.idea_creation_timeout = idea_creation_timeout
 
     async def setup_hook(self) -> None:
         await self.backend_client.start()
@@ -77,13 +80,33 @@ class IdeaInboxBot(discord.Client):
             await message.reply(TOO_LONG_IDEA_MSG)
             return
 
-        reply = await submit_idea(
-            self.backend_client,
-            text=text,
-            user_id=str(message.author.id),
-            source="discord",
+        await message.reply("📝 Got it, processing your idea...")
+        asyncio.create_task(
+            self.process_and_send_update(
+                message=message,
+                text=text,
+                user_id=str(message.author.id),
+            )
         )
-        await message.reply(reply)
+
+    async def process_and_send_update(
+        self,
+        *,
+        message: Message,
+        text: str,
+        user_id: str,
+    ) -> None:
+        try:
+            reply = await submit_idea(
+                self.backend_client,
+                text=text,
+                user_id=user_id,
+                source="discord",
+                timeout=self.idea_creation_timeout,
+            )
+            await message.reply(reply)
+        except Exception:
+            logger.exception("Failed to process or send Discord idea update")
 
     def _should_process_message(self, message: Message) -> bool:
         if isinstance(message.channel, discord.DMChannel):
@@ -113,6 +136,7 @@ def main() -> None:
         backend_client=backend_client,
         allowed_user_ids=cfg.discord_allowed_user_ids,
         idea_channel_id=cfg.discord_idea_channel_id,
+        idea_creation_timeout=cfg.idea_creation_timeout,
     )
     client.run(cfg.discord_bot_token)
 

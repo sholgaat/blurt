@@ -29,6 +29,7 @@ class BotSettings(BaseSettings):
 
     bot_provider: str = "telegram"
     backend_url: str = "http://localhost:8000"
+    idea_creation_timeout: int = 30
 
     # Discord
     discord_bot_token: str = ""
