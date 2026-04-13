@@ -1,53 +1,28 @@
 import asyncio
-import logging
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import discord
 import pytest
 
-from bot.discord.main import IdeaInboxBot
-from bot.shared.idea_service import MAX_IDEA_LENGTH
-from bot.shared.backend_client import (
-    BackendConnectionError,
-    BackendResponseError,
-    IdeaBackendClient,
-)
-from tests.conftest import FakeBackend
+from bot.connectors.discord_connector import DiscordConnector
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
 
 _ALLOWED_USER_ID = 111
 _OTHER_USER_ID = 999
 _IDEA_CHANNEL_ID = 42
 
 
-# ---------------------------------------------------------------------------
-# Mock helpers
-# ---------------------------------------------------------------------------
-
-
-def _make_bot(
-    backend: IdeaBackendClient,
-    *,
-    allowed_user_ids: set[str] | None = None,
-    idea_channel_id: int | None = None,
-) -> IdeaInboxBot:
-    if allowed_user_ids is None:
-        allowed_user_ids = {str(_ALLOWED_USER_ID)}
-    intents = discord.Intents.none()
-    return IdeaInboxBot(
-        intents=intents,
-        backend_client=backend,
-        allowed_user_ids=allowed_user_ids,
+def _make_connector(*, idea_channel_id: int | None = None) -> DiscordConnector:
+    return DiscordConnector(
+        "token",
         idea_channel_id=str(idea_channel_id) if idea_channel_id is not None else "",
     )
 
 
-def _patch_bot_user(bot: IdeaInboxBot, user: MagicMock):
-    """Patch the read-only discord.Client.user property for testing."""
-    return patch.object(type(bot), "user", new_callable=PropertyMock, return_value=user)
+def _patch_connector_user(connector: DiscordConnector, user: MagicMock):
+    return patch.object(
+        type(connector._client), "user", new_callable=PropertyMock, return_value=user
+    )
 
 
 def _make_message(
@@ -57,7 +32,6 @@ def _make_message(
     channel_type: str = "dm",
     channel_id: int = _IDEA_CHANNEL_ID,
 ) -> tuple:
-    """Build a minimal discord.Message-like mock pair (message, author)."""
     message = MagicMock(spec=discord.Message)
     message.content = content
 
@@ -76,262 +50,102 @@ def _make_message(
     return message, author
 
 
-def _make_dm_message(content: str = "An idea", *, author_id: int = _ALLOWED_USER_ID) -> tuple:
-    return _make_message(content, author_id=author_id, channel_type="dm")
+@pytest.mark.asyncio
+async def test_dm_from_allowed_user_is_dispatched():
+    connector = _make_connector()
+    handler = AsyncMock()
+    connector.register_message_handler(handler)
+    message, _ = _make_message("My idea", author_id=_ALLOWED_USER_ID)
 
+    with _patch_connector_user(connector, MagicMock()):
+        await connector._normalise_message(message)
 
-def _make_guild_message(
-    content: str = "An idea",
-    *,
-    author_id: int = _ALLOWED_USER_ID,
-    channel_id: int = _IDEA_CHANNEL_ID,
-) -> tuple:
-    return _make_message(
-        content, author_id=author_id, channel_type="text", channel_id=channel_id
-    )
-
-
-# Sentinel: a distinct object that will NOT equal any message author.
-_DIFFERENT_USER = MagicMock()
-
-
-# ---------------------------------------------------------------------------
-# Tests: DM processing
-# ---------------------------------------------------------------------------
+    assert handler.await_count == 1
+    envelope = handler.await_args.args[0]
+    assert envelope.user_id == str(_ALLOWED_USER_ID)
+    assert envelope.text == "My idea"
 
 
 @pytest.mark.asyncio
-async def test_dm_from_allowed_user_is_processed():
-    backend = FakeBackend()
-    bot = _make_bot(backend)
-    message, _ = _make_dm_message("My idea", author_id=_ALLOWED_USER_ID)
+async def test_dm_from_blocked_user_still_dispatches_to_handler():
+    connector = _make_connector()
+    handler = AsyncMock()
+    connector.register_message_handler(handler)
+    message, _ = _make_message(author_id=_OTHER_USER_ID)
 
-    with _patch_bot_user(bot, _DIFFERENT_USER):
-        await bot.on_message(message)
-        await asyncio.sleep(0)
+    with _patch_connector_user(connector, MagicMock()):
+        await connector._normalise_message(message)
 
-    assert backend.called_with == ("My idea", str(_ALLOWED_USER_ID), "discord")
-    assert message.reply.await_count == 2
-    reply_text = message.reply.await_args_list[1].args[0]
-    assert "Test Idea" in reply_text
-    assert "http://example.com/idea" in reply_text
-
-
-# ---------------------------------------------------------------------------
-# Tests: Allowlist blocking
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-async def test_dm_from_blocked_user_is_rejected():
-    backend = FakeBackend()
-    bot = _make_bot(backend, allowed_user_ids={str(_ALLOWED_USER_ID)})
-    message, _ = _make_dm_message(author_id=_OTHER_USER_ID)
-
-    with _patch_bot_user(bot, _DIFFERENT_USER):
-        await bot.on_message(message)
-        await asyncio.sleep(0)
-
-    assert backend.called_with is None
-    message.reply.assert_awaited_once()
-    reply_text = message.reply.call_args[0][0]
-    assert "private" in reply_text.lower()
-    assert str(_OTHER_USER_ID) in reply_text
-
-
-# ---------------------------------------------------------------------------
-# Tests: Bot ignores its own messages
-# ---------------------------------------------------------------------------
+    assert handler.await_count == 1
+    assert handler.await_args.args[0].user_id == str(_OTHER_USER_ID)
 
 
 @pytest.mark.asyncio
 async def test_bot_ignores_own_messages():
-    backend = FakeBackend()
-    bot = _make_bot(backend)
-    message, author = _make_dm_message(author_id=_ALLOWED_USER_ID)
+    connector = _make_connector()
+    handler = AsyncMock()
+    connector.register_message_handler(handler)
+    message, author = _make_message(author_id=_ALLOWED_USER_ID)
 
-    # bot.user IS the author -> should be ignored
-    with _patch_bot_user(bot, author):
-        await bot.on_message(message)
+    with _patch_connector_user(connector, author):
+        await connector._normalise_message(message)
 
-    assert backend.called_with is None
-    message.reply.assert_not_awaited()
-
-
-# ---------------------------------------------------------------------------
-# Tests: Channel ID filtering
-# ---------------------------------------------------------------------------
+    handler.assert_not_awaited()
 
 
 @pytest.mark.asyncio
-async def test_guild_channel_matching_id_is_processed():
-    backend = FakeBackend()
-    bot = _make_bot(backend, idea_channel_id=_IDEA_CHANNEL_ID)
-    message, _ = _make_guild_message(author_id=_ALLOWED_USER_ID, channel_id=_IDEA_CHANNEL_ID)
+async def test_guild_channel_matching_id_is_dispatched():
+    connector = _make_connector(idea_channel_id=_IDEA_CHANNEL_ID)
+    handler = AsyncMock()
+    connector.register_message_handler(handler)
+    message, _ = _make_message(
+        author_id=_ALLOWED_USER_ID, channel_type="text", channel_id=_IDEA_CHANNEL_ID
+    )
 
-    with _patch_bot_user(bot, _DIFFERENT_USER):
-        await bot.on_message(message)
-        await asyncio.sleep(0)
+    with _patch_connector_user(connector, MagicMock()):
+        await connector._normalise_message(message)
 
-    assert backend.called_with is not None
-    assert backend.called_with[2] == "discord"
+    assert handler.await_count == 1
 
 
 @pytest.mark.asyncio
 async def test_guild_channel_non_matching_id_is_ignored():
-    backend = FakeBackend()
-    bot = _make_bot(backend, idea_channel_id=_IDEA_CHANNEL_ID)
-    message, _ = _make_guild_message(author_id=_ALLOWED_USER_ID, channel_id=999_999)
+    connector = _make_connector(idea_channel_id=_IDEA_CHANNEL_ID)
+    handler = AsyncMock()
+    connector.register_message_handler(handler)
+    message, _ = _make_message(
+        author_id=_ALLOWED_USER_ID, channel_type="text", channel_id=999_999
+    )
 
-    with _patch_bot_user(bot, _DIFFERENT_USER):
-        await bot.on_message(message)
-        await asyncio.sleep(0)
+    with _patch_connector_user(connector, MagicMock()):
+        await connector._normalise_message(message)
 
-    assert backend.called_with is None
-    message.reply.assert_not_awaited()
-
-
-# ---------------------------------------------------------------------------
-# Tests: No channel configured = DM-only
-# ---------------------------------------------------------------------------
+    handler.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test_guild_message_ignored_when_no_channel_id_configured():
-    backend = FakeBackend()
-    bot = _make_bot(backend, idea_channel_id=None)
-    message, _ = _make_guild_message(author_id=_ALLOWED_USER_ID, channel_id=_IDEA_CHANNEL_ID)
-
-    with _patch_bot_user(bot, _DIFFERENT_USER):
-        await bot.on_message(message)
-        await asyncio.sleep(0)
-
-    assert backend.called_with is None
-    message.reply.assert_not_awaited()
-
-
-@pytest.mark.asyncio
-async def test_dm_still_processed_when_no_channel_id_configured():
-    backend = FakeBackend()
-    bot = _make_bot(backend, idea_channel_id=None)
-    message, _ = _make_dm_message(author_id=_ALLOWED_USER_ID)
-
-    with _patch_bot_user(bot, _DIFFERENT_USER):
-        await bot.on_message(message)
-        await asyncio.sleep(0)
-
-    assert backend.called_with is not None
-
-
-# ---------------------------------------------------------------------------
-# Tests: Startup warning when no channel ID set
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-async def test_setup_hook_logs_warning_when_no_channel_id(caplog):
-    backend = FakeBackend()
-    backend.start = AsyncMock()
-    bot = _make_bot(backend, idea_channel_id=None)
-
-    with caplog.at_level(logging.WARNING, logger="bot.discord.main"):
-        await bot.setup_hook()
-
-    assert any("DISCORD_IDEA_CHANNEL_ID" in record.message for record in caplog.records)
-    backend.start.assert_awaited_once()
-
-
-@pytest.mark.asyncio
-async def test_setup_hook_no_warning_when_channel_id_set(caplog):
-    backend = FakeBackend()
-    backend.start = AsyncMock()
-    bot = _make_bot(backend, idea_channel_id=_IDEA_CHANNEL_ID)
-
-    with caplog.at_level(logging.WARNING, logger="bot.discord.main"):
-        await bot.setup_hook()
-
-    assert not any("DISCORD_IDEA_CHANNEL_ID" in record.message for record in caplog.records)
-    backend.start.assert_awaited_once()
-
-
-# ---------------------------------------------------------------------------
-# Tests: Backend error handling
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-async def test_backend_connection_error_replies_gracefully():
-    backend = FakeBackend(BackendConnectionError("down"))
-    bot = _make_bot(backend)
-    message, _ = _make_dm_message(author_id=_ALLOWED_USER_ID)
-
-    with _patch_bot_user(bot, _DIFFERENT_USER):
-        await bot.on_message(message)
-        await asyncio.sleep(0)
-
-    assert message.reply.await_count == 2
-    assert "backend" in message.reply.await_args_list[1].args[0].lower()
-
-@pytest.mark.asyncio
-async def test_backend_response_error_replies_gracefully():
-    backend = FakeBackend(BackendResponseError("bad"))
-    bot = _make_bot(backend)
-    message, _ = _make_dm_message(author_id=_ALLOWED_USER_ID)
-
-    with _patch_bot_user(bot, _DIFFERENT_USER):
-        await bot.on_message(message)
-        await asyncio.sleep(0)
-
-    assert message.reply.await_count == 2
-    assert "went wrong" in message.reply.await_args_list[1].args[0].lower()
-
-
-# ---------------------------------------------------------------------------
-# Tests: Empty and too-long message validation
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-async def test_empty_message_is_rejected():
-    backend = FakeBackend()
-    bot = _make_bot(backend)
-    message, _ = _make_dm_message(content="   ", author_id=_ALLOWED_USER_ID)
-
-    with _patch_bot_user(bot, _DIFFERENT_USER):
-        await bot.on_message(message)
-        await asyncio.sleep(0)
-
-    assert backend.called_with is None
-    assert message.reply.await_count == 1
-    assert "send me your idea" in message.reply.await_args_list[0].args[0].lower()
-
-
-@pytest.mark.asyncio
-async def test_too_long_message_is_rejected():
-    backend = FakeBackend()
-    bot = _make_bot(backend)
-    message, _ = _make_dm_message(content="x" * 4097, author_id=_ALLOWED_USER_ID)
-
-    with _patch_bot_user(bot, _DIFFERENT_USER):
-        await bot.on_message(message)
-        await asyncio.sleep(0)
-
-    assert backend.called_with is None
-    assert message.reply.await_count == 1
-    assert (
-        message.reply.await_args_list[0].args[0]
-        == f"That message is too long (max {MAX_IDEA_LENGTH} characters). Try summarising it a bit."
+    connector = _make_connector(idea_channel_id=None)
+    handler = AsyncMock()
+    connector.register_message_handler(handler)
+    message, _ = _make_message(
+        author_id=_ALLOWED_USER_ID, channel_type="text", channel_id=_IDEA_CHANNEL_ID
     )
 
+    with _patch_connector_user(connector, MagicMock()):
+        await connector._normalise_message(message)
+
+    handler.assert_not_awaited()
+
 
 @pytest.mark.asyncio
-async def test_message_at_max_length_is_accepted():
-    backend = FakeBackend()
-    bot = _make_bot(backend)
-    message, _ = _make_dm_message(content="x" * 4096, author_id=_ALLOWED_USER_ID)
+async def test_dm_still_dispatched_when_no_channel_id_configured():
+    connector = _make_connector(idea_channel_id=None)
+    handler = AsyncMock()
+    connector.register_message_handler(handler)
+    message, _ = _make_message(author_id=_ALLOWED_USER_ID)
 
-    with _patch_bot_user(bot, _DIFFERENT_USER):
-        await bot.on_message(message)
-        await asyncio.sleep(0)
+    with _patch_connector_user(connector, MagicMock()):
+        await connector._normalise_message(message)
 
-    assert backend.called_with is not None
+    assert handler.await_count == 1

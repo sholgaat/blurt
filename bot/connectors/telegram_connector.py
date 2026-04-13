@@ -1,30 +1,19 @@
 from __future__ import annotations
 
-import logging
-
 from telegram import Update
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
 
-from bot.shared.bot_connector import (
-    BotConnector,
-    MessageEnvelope,
-    MessageHandler as EnvelopeHandler,
-)
-
-logger = logging.getLogger(__name__)
+from bot.shared.bot_connector import BotConnector, MessageEnvelope
 
 
 class TelegramConnector(BotConnector):
     def __init__(self, token: str):
+        super().__init__()
         self._token = token
-        self._message_handler: EnvelopeHandler | None = None
         self._application = Application.builder().token(token).build()
         self._application.add_handler(
-            MessageHandler(filters.TEXT & ~filters.COMMAND, self._handle_update)
+            MessageHandler(filters.TEXT & ~filters.COMMAND, self._normalise_message)
         )
-
-    def register_message_handler(self, handler: EnvelopeHandler) -> None:
-        self._message_handler = handler
 
     def start(self) -> None:
         if not self._token:
@@ -34,13 +23,10 @@ class TelegramConnector(BotConnector):
     def stop(self) -> None:
         self._application.stop_running()
 
-    async def _handle_update(
+    async def _normalise_message(
         self, update: Update, _context: ContextTypes.DEFAULT_TYPE
     ) -> None:
         if not update.message or not update.effective_user:
-            return
-        if self._message_handler is None:
-            logger.warning("No Telegram message handler registered")
             return
 
         envelope = MessageEnvelope(
@@ -48,4 +34,7 @@ class TelegramConnector(BotConnector):
             text=update.message.text or "",
             reply=update.message.reply_text,
         )
+
+        if self._message_handler is None:
+            return
         await self._message_handler(envelope)

@@ -16,9 +16,11 @@ MessageHandler = Callable[[MessageEnvelope], Awaitable[None]]
 
 
 class BotConnector(ABC):
-    @abstractmethod
+    def __init__(self) -> None:
+        self._message_handler: MessageHandler | None = None
+
     def register_message_handler(self, handler: MessageHandler) -> None:
-        raise NotImplementedError
+        self._message_handler = handler
 
     @abstractmethod
     def start(self) -> None:

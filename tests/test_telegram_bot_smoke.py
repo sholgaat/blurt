@@ -48,14 +48,11 @@ async def test_handle_message_calls_backend_and_replies():
         )
     )
 
-    assert conversation.replies == ["📝 Got it, processing your idea..."]
-    await conversation.done.wait()
-
-    assert backend.called_with == ("An idea", "42", "telegram")
     assert conversation.replies == [
         "📝 Got it, processing your idea...",
         "Idea captured — Test Idea\n\nA test idea summary.\n\nTags: test · idea\n\nhttp://example.com/idea",
     ]
+    assert backend.called_with == ("An idea", "42", "telegram")
 
 
 @pytest.mark.asyncio
