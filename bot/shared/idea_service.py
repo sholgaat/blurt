@@ -12,9 +12,7 @@ MAX_IDEA_LENGTH = 4096
 BACKEND_UNAVAILABLE_MSG = (
     "Couldn't reach the backend right now — please try again shortly."
 )
-BACKEND_TIMEOUT_MSG = (
-    "This is taking longer than expected — please try again shortly."
-)
+BACKEND_TIMEOUT_MSG = "This is taking longer than expected — please try again shortly."
 BACKEND_ERROR_MSG = "Something went wrong saving that idea — please try again."
 EMPTY_IDEA_MSG = "Send me your idea as a message and I'll log it."
 TOO_LONG_IDEA_MSG = (
@@ -23,7 +21,7 @@ TOO_LONG_IDEA_MSG = (
 )
 
 
-async def submit_idea(
+async def summarise_idea(
     backend_client: IdeaBackendClient,
     *,
     text: str,

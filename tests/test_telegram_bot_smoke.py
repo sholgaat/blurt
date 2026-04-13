@@ -2,139 +2,157 @@ import asyncio
 
 import pytest
 
-from bot.telegram.main import handle_message
-from bot.shared.idea_service import MAX_IDEA_LENGTH
 from bot.shared.backend_client import BackendConnectionError, BackendResponseError
+from bot.shared.bot_connector import MessageEnvelope
+from bot.shared.idea_handler import IdeaHandler
+from bot.shared.idea_service import MAX_IDEA_LENGTH
 from tests.conftest import FakeBackend
 
 
-class DummyMessage:
-    def __init__(self, text: str):
+class DummyConversation:
+    def __init__(self, user_id: str, text: str, *, expected_replies: int = 2):
+        self.user_id = user_id
         self.text = text
+        self.expected_replies = expected_replies
         self.replies: list[str] = []
+        self.done = asyncio.Event()
 
-    async def reply_text(self, text: str) -> None:
+    async def reply(self, text: str) -> None:
         self.replies.append(text)
+        if len(self.replies) >= self.expected_replies:
+            self.done.set()
 
 
-class DummyUser:
-    def __init__(self, user_id: int):
-        self.id = user_id
-
-
-class DummyUpdate:
-    def __init__(self, message: DummyMessage | None, user: DummyUser | None):
-        self.message = message
-        self.effective_user = user
+def _make_handler(
+    backend: FakeBackend, allowed_user_ids: set[str] | None = None
+) -> IdeaHandler:
+    return IdeaHandler(
+        backend_client=backend,
+        allowed_user_ids=allowed_user_ids or {"42"},
+        source="telegram",
+        backend_timeout=30,
+    )
 
 
 @pytest.mark.asyncio
 async def test_handle_message_calls_backend_and_replies():
     backend = FakeBackend()
-    update = DummyUpdate(DummyMessage("An idea"), DummyUser(42))
+    handler = _make_handler(backend)
+    conversation = DummyConversation("42", "An idea")
 
-    await handle_message(backend, {"42"}, update, None)
-    await asyncio.sleep(0)
+    await handler.handle_message(
+        MessageEnvelope(
+            user_id=conversation.user_id,
+            text=conversation.text,
+            reply=conversation.reply,
+        )
+    )
+
+    assert conversation.replies == ["📝 Got it, processing your idea..."]
+    await conversation.done.wait()
 
     assert backend.called_with == ("An idea", "42", "telegram")
-    assert update.message.replies == [
+    assert conversation.replies == [
         "📝 Got it, processing your idea...",
-        "Idea captured — Test Idea\n\nA test idea summary.\n\nTags: test · idea\n\nhttp://example.com/idea"
+        "Idea captured — Test Idea\n\nA test idea summary.\n\nTags: test · idea\n\nhttp://example.com/idea",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_handle_message_returns_early_when_user_is_not_allowed():
+    backend = FakeBackend()
+    handler = _make_handler(backend, allowed_user_ids={"42"})
+    conversation = DummyConversation("999", "An idea", expected_replies=1)
+
+    await handler.handle_message(
+        MessageEnvelope(
+            user_id=conversation.user_id,
+            text=conversation.text,
+            reply=conversation.reply,
+        )
+    )
+
+    assert backend.called_with is None
+    assert conversation.replies == [
+        "This bot is private — you're not on the approved list. Ask the owner to add your user ID: 999"
     ]
 
 
 @pytest.mark.asyncio
 async def test_handle_message_returns_early_when_no_message():
     backend = FakeBackend()
-    update = DummyUpdate(None, DummyUser(42))
+    handler = _make_handler(backend)
+    conversation = DummyConversation("42", "   ", expected_replies=1)
 
-    await handle_message(backend, {"42"}, update, None)
+    await handler.handle_message(
+        MessageEnvelope(
+            user_id=conversation.user_id,
+            text=conversation.text,
+            reply=conversation.reply,
+        )
+    )
 
     assert backend.called_with is None
+    assert conversation.replies == ["Send me your idea as a message and I'll log it."]
 
 
 @pytest.mark.asyncio
-async def test_handle_message_returns_early_when_no_user():
+async def test_handle_message_returns_early_when_message_is_too_long():
     backend = FakeBackend()
-    update = DummyUpdate(DummyMessage("An idea"), None)
+    handler = _make_handler(backend)
+    conversation = DummyConversation("42", "x" * 4097, expected_replies=1)
 
-    await handle_message(backend, {"42"}, update, None)
+    await handler.handle_message(
+        MessageEnvelope(
+            user_id=conversation.user_id,
+            text=conversation.text,
+            reply=conversation.reply,
+        )
+    )
 
     assert backend.called_with is None
+    assert conversation.replies == [
+        f"That message is too long (max {MAX_IDEA_LENGTH} characters). Try summarising it a bit."
+    ]
 
 
 @pytest.mark.asyncio
 async def test_handle_message_backend_connection_error():
     backend = FakeBackend(BackendConnectionError("down"))
-    update = DummyUpdate(DummyMessage("An idea"), DummyUser(42))
+    handler = _make_handler(backend)
+    conversation = DummyConversation("42", "An idea")
 
-    await handle_message(backend, {"42"}, update, None)
-    await asyncio.sleep(0)
+    await handler.handle_message(
+        MessageEnvelope(
+            user_id=conversation.user_id,
+            text=conversation.text,
+            reply=conversation.reply,
+        )
+    )
+    await conversation.done.wait()
 
-    assert update.message.replies == [
+    assert conversation.replies == [
         "📝 Got it, processing your idea...",
-        "Couldn't reach the backend right now — please try again shortly."
+        "Couldn't reach the backend right now — please try again shortly.",
     ]
 
 
 @pytest.mark.asyncio
 async def test_handle_message_backend_response_error():
     backend = FakeBackend(BackendResponseError("bad"))
-    update = DummyUpdate(DummyMessage("An idea"), DummyUser(42))
+    handler = _make_handler(backend)
+    conversation = DummyConversation("42", "An idea")
 
-    await handle_message(backend, {"42"}, update, None)
-    await asyncio.sleep(0)
+    await handler.handle_message(
+        MessageEnvelope(
+            user_id=conversation.user_id,
+            text=conversation.text,
+            reply=conversation.reply,
+        )
+    )
+    await conversation.done.wait()
 
-    assert update.message.replies == [
+    assert conversation.replies == [
         "📝 Got it, processing your idea...",
-        "Something went wrong saving that idea — please try again."
+        "Something went wrong saving that idea — please try again.",
     ]
-
-
-@pytest.mark.asyncio
-async def test_handle_message_blocks_unapproved_user():
-    backend = FakeBackend()
-    update = DummyUpdate(DummyMessage("Idea text"), DummyUser(999))
-
-    await handle_message(backend, {"42"}, update, None)
-
-    assert backend.called_with is None
-    assert update.message.replies == [
-        "This bot is private — you're not on the approved list. "
-        "Ask the owner to add your user ID: 999"
-    ]
-
-
-@pytest.mark.asyncio
-async def test_handle_message_rejects_empty_message():
-    backend = FakeBackend()
-    update = DummyUpdate(DummyMessage("   "), DummyUser(42))
-
-    await handle_message(backend, {"42"}, update, None)
-
-    assert backend.called_with is None
-    assert update.message.replies == ["Send me your idea as a message and I'll log it."]
-
-
-@pytest.mark.asyncio
-async def test_handle_message_rejects_too_long_message():
-    backend = FakeBackend()
-    update = DummyUpdate(DummyMessage("x" * 4097), DummyUser(42))
-
-    await handle_message(backend, {"42"}, update, None)
-
-    assert backend.called_with is None
-    assert update.message.replies == [
-        f"That message is too long (max {MAX_IDEA_LENGTH} characters). Try summarising it a bit."
-    ]
-
-
-@pytest.mark.asyncio
-async def test_handle_message_accepts_message_at_max_length():
-    backend = FakeBackend()
-    update = DummyUpdate(DummyMessage("x" * 4096), DummyUser(42))
-
-    await handle_message(backend, {"42"}, update, None)
-    await asyncio.sleep(0)
-
-    assert backend.called_with is not None

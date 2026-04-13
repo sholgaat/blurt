@@ -11,7 +11,7 @@ from bot.shared.idea_service import (
     EMPTY_IDEA_MSG,
     MAX_IDEA_LENGTH,
     TOO_LONG_IDEA_MSG,
-    submit_idea,
+    summarise_idea,
 )
 from bot.settings import get_bot_settings
 
@@ -97,7 +97,7 @@ class IdeaInboxBot(discord.Client):
         user_id: str,
     ) -> None:
         try:
-            reply = await submit_idea(
+            reply = await summarise_idea(
                 self.backend_client,
                 text=text,
                 user_id=user_id,
