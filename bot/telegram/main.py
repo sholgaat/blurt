@@ -23,20 +23,18 @@ async def handle_message(
     backend_client: IdeaBackendClient,
     allowed_user_ids: set[str],
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
     if not update.message or not update.effective_user:
         return
 
     text = update.message.text or ""
     user_id = str(update.effective_user.id)
-    numeric_id = update.effective_user.id
 
     if user_id not in allowed_user_ids:
-        logger.warning("Blocked message from unauthorized user_id=%s", numeric_id)
+        logger.warning("Blocked message from unauthorized user_id=%s", user_id)
         await update.message.reply_text(
             f"This bot is private — you're not on the approved list. "
-            f"Ask the owner to add your user ID: {numeric_id}"
+            f"Ask the owner to add your user ID: {user_id}"
         )
         return
 
