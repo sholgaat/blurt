@@ -30,30 +30,10 @@ def _make_handler(
 ) -> IdeaHandler:
     return IdeaHandler(
         backend_client=backend,
-        allowed_user_ids=allowed_user_ids or {"42"},
+        allowed_user_ids=allowed_user_ids or {"telegram:42"},
         source="telegram",
         backend_timeout=30,
     )
-
-
-def test_validate_config_raises_when_token_missing():
-    with pytest.raises(RuntimeError, match="TELEGRAM_BOT_TOKEN"):
-        TelegramConnector.validate_config(
-            SimpleNamespace(
-                telegram_bot_token="",
-                telegram_allowed_user_ids={"42"},
-            )
-        )
-
-
-def test_validate_config_raises_when_allowed_users_missing():
-    with pytest.raises(RuntimeError, match="TELEGRAM_ALLOWED_USER_IDS"):
-        TelegramConnector.validate_config(
-            SimpleNamespace(
-                telegram_bot_token="token",
-                telegram_allowed_user_ids=set(),
-            )
-        )
 
 
 @pytest.mark.asyncio
@@ -80,7 +60,7 @@ async def test_handle_message_calls_backend_and_replies():
 @pytest.mark.asyncio
 async def test_handle_message_returns_early_when_user_is_not_allowed():
     backend = FakeBackend()
-    handler = _make_handler(backend, allowed_user_ids={"42"})
+    handler = _make_handler(backend, allowed_user_ids={"telegram:42"})
     conversation = DummyConversation("999", "An idea", expected_replies=1)
 
     await handler.handle_message(
@@ -93,7 +73,7 @@ async def test_handle_message_returns_early_when_user_is_not_allowed():
 
     assert backend.called_with is None
     assert conversation.replies == [
-        "This bot is private — you're not on the approved list. Ask the owner to add your user ID: 999"
+        "This bot is private — you're not on the approved list. Ask the owner to add your user ID: telegram:999"
     ]
 
 

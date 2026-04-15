@@ -16,21 +16,10 @@ MessageHandler = Callable[[MessageEnvelope], Awaitable[None]]
 
 
 class BotConnector(ABC):
-    def __init__(self) -> None:
-        self._message_handler: MessageHandler | None = None
-
-    def register_message_handler(self, handler: MessageHandler) -> None:
+    def __init__(self, handler: MessageHandler) -> None:
         self._message_handler = handler
-
-    @classmethod
-    @abstractmethod
-    def validate_config(cls, cfg) -> None:
-        raise NotImplementedError
 
     @abstractmethod
     def start(self) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    def stop(self) -> None:
+        """Start the bot. This is a blocking call that runs until the bot exits."""
         raise NotImplementedError

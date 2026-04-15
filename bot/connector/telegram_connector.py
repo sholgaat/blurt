@@ -3,22 +3,14 @@ from __future__ import annotations
 from telegram import Update
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
 
-from bot.connector.bot_connector import BotConnector, MessageEnvelope
+from bot.connector.bot_connector import BotConnector, MessageEnvelope, MessageHandler as MessageHandlerType
 
 
 class TelegramConnector(BotConnector):
-    @classmethod
-    def validate_config(cls, cfg) -> None:
-        if not cfg.telegram_bot_token:
-            raise RuntimeError("TELEGRAM_BOT_TOKEN is not set in the environment.")
-        if not cfg.telegram_allowed_user_ids:
-            raise RuntimeError(
-                "TELEGRAM_ALLOWED_USER_IDS is not set in the environment. "
-                "Provide a comma-separated list of Telegram user IDs that are allowed to submit ideas."
-            )
-
-    def __init__(self, token: str):
-        super().__init__()
+    def __init__(self, token: str, handler: MessageHandlerType):
+        super().__init__(handler)
+        if not token:
+            raise RuntimeError("TELEGRAM_BOT_TOKEN is required.")
         self._token = token
         self._application = Application.builder().token(token).build()
         self._application.add_handler(
@@ -26,12 +18,7 @@ class TelegramConnector(BotConnector):
         )
 
     def start(self) -> None:
-        if not self._token:
-            raise RuntimeError("TELEGRAM_BOT_TOKEN is not set in the environment.")
         self._application.run_polling()
-
-    def stop(self) -> None:
-        self._application.stop_running()
 
     async def _normalise_message(
         self, update: Update, _context: ContextTypes.DEFAULT_TYPE
@@ -45,6 +32,4 @@ class TelegramConnector(BotConnector):
             reply=update.message.reply_text,
         )
 
-        if self._message_handler is None:
-            return
         await self._message_handler(envelope)

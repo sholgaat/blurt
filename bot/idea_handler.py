@@ -59,11 +59,12 @@ class IdeaHandler:
         await message.reply(reply)
 
     async def is_user_allowed(self, message: MessageEnvelope) -> bool:
-        if message.user_id in self.allowed_user_ids:
+        prefixed_user_id = f"{self.source}:{message.user_id}"
+        if prefixed_user_id in self.allowed_user_ids:
             return True
         await self._safe_reply(
             message,
-            UNAUTHORIZED_MESSAGE.format(user_id=message.user_id),
+            UNAUTHORIZED_MESSAGE.format(user_id=prefixed_user_id),
             log_prefix="unauthorized message",
         )
         return False

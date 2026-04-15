@@ -246,12 +246,6 @@ setup_telegram() {
   echo "  See https://core.telegram.org/bots#botfather"
   prompt_value TELEGRAM_BOT_TOKEN "TELEGRAM_BOT_TOKEN" true
   set_env "$BOT_ENV" "TELEGRAM_BOT_TOKEN" "$TELEGRAM_BOT_TOKEN"
-
-  echo
-  echo "  TELEGRAM_ALLOWED_USER_IDS: comma-separated numeric Telegram user IDs"
-  echo "  that are allowed to submit ideas. Find your ID by messaging @userinfobot."
-  prompt_value TELEGRAM_ALLOWED_USER_IDS "TELEGRAM_ALLOWED_USER_IDS"
-  set_env "$BOT_ENV" "TELEGRAM_ALLOWED_USER_IDS" "$TELEGRAM_ALLOWED_USER_IDS"
 }
 
 setup_discord() {
@@ -262,13 +256,6 @@ setup_discord() {
   echo "  The bot needs the 'Message Content' privileged intent enabled."
   prompt_value DISCORD_BOT_TOKEN "DISCORD_BOT_TOKEN" true
   set_env "$BOT_ENV" "DISCORD_BOT_TOKEN" "$DISCORD_BOT_TOKEN"
-
-  echo
-  echo "  DISCORD_ALLOWED_USER_IDS: comma-separated Discord user IDs (numeric)"
-  echo "  that are allowed to submit ideas. Enable Developer Mode in Discord,"
-  echo "  then right-click a user and choose 'Copy User ID'."
-  prompt_value DISCORD_ALLOWED_USER_IDS "DISCORD_ALLOWED_USER_IDS"
-  set_env "$BOT_ENV" "DISCORD_ALLOWED_USER_IDS" "$DISCORD_ALLOWED_USER_IDS"
 
   echo
   echo "  DISCORD_IDEA_CHANNEL_ID: (optional) numeric ID of the guild channel where"
@@ -283,6 +270,34 @@ case "$COMPOSE_PROFILES" in
   discord)          setup_discord ;;
   discord,telegram) setup_discord; setup_telegram ;;
 esac
+
+# ── allowed user IDs (platform-scoped JSON array) ──────────────────────────────
+
+info "--- User authorization ---"
+echo "  ALLOWED_USER_IDS: JSON array of allowed user IDs in format 'platform:id'."
+echo "  Each provider's user IDs are prefixed to prevent cross-contamination."
+echo
+ALLOWED_IDS_JSON="["
+
+if [[ "$COMPOSE_PROFILES" == *"telegram"* ]]; then
+  echo "  Telegram: Find your user ID by messaging @userinfobot."
+  prompt_value TELEGRAM_USER_ID "Your Telegram user ID"
+  ALLOWED_IDS_JSON="${ALLOWED_IDS_JSON}\"telegram:${TELEGRAM_USER_ID}\""
+fi
+
+if [[ "$COMPOSE_PROFILES" == *"discord"* ]]; then
+  if [[ "$ALLOWED_IDS_JSON" != "[" ]]; then
+    ALLOWED_IDS_JSON="${ALLOWED_IDS_JSON},"
+  fi
+  echo
+  echo "  Discord: Enable Developer Mode in Discord settings, then right-click"
+  echo "  yourself and choose 'Copy User ID'."
+  prompt_value DISCORD_USER_ID "Your Discord user ID"
+  ALLOWED_IDS_JSON="${ALLOWED_IDS_JSON}\"discord:${DISCORD_USER_ID}\""
+fi
+
+ALLOWED_IDS_JSON="${ALLOWED_IDS_JSON}]"
+set_env "$BOT_ENV" "ALLOWED_USER_IDS" "$ALLOWED_IDS_JSON"
 
 # BACKEND_URL is always correct for Docker Compose — no prompt needed.
 

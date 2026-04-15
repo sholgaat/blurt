@@ -2,22 +2,8 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from pydantic import Field, field_validator
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-
-def _parse_str_set(value: object) -> set[str]:
-    """Coerce a comma-separated string or other input into a set of strings."""
-    if isinstance(value, set):
-        return {str(v).strip() for v in value if str(v).strip()}
-    if isinstance(value, (list, tuple, frozenset)):
-        return {str(v).strip() for v in value if str(v).strip()}
-    if isinstance(value, int):
-        return {str(value)}
-    if isinstance(value, str):
-        parts = value.split(",")
-        return {p.strip() for p in parts if p.strip()}
-    return set()
 
 
 class BotSettings(BaseSettings):
@@ -31,21 +17,15 @@ class BotSettings(BaseSettings):
     backend_url: str = "http://localhost:8000"
     idea_creation_timeout: int = 30
 
+    # Allowed user IDs in format "platform:id" (e.g. ["discord:123456", "telegram:789012"])
+    allowed_user_ids: set[str] = Field(default_factory=set)
+
     # Discord
     discord_bot_token: str = ""
-    discord_allowed_user_ids: set[str] = Field(default_factory=set)
     discord_idea_channel_id: str = ""
 
     # Telegram
     telegram_bot_token: str = ""
-    telegram_allowed_user_ids: set[str] = Field(default_factory=set)
-
-    @field_validator(
-        "discord_allowed_user_ids", "telegram_allowed_user_ids", mode="before"
-    )
-    @classmethod
-    def _parse_id_set(cls, v: object) -> set[str]:
-        return _parse_str_set(v)
 
 
 @lru_cache(maxsize=1)

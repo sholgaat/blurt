@@ -4,28 +4,16 @@ import logging
 
 import discord
 
-from bot.connector.bot_connector import BotConnector, MessageEnvelope
+from bot.connector.bot_connector import BotConnector, MessageEnvelope, MessageHandler
 
 logger = logging.getLogger(__name__)
 
 
 class DiscordConnector(BotConnector):
-    @classmethod
-    def validate_config(cls, cfg) -> None:
-        if not cfg.discord_bot_token:
-            raise RuntimeError("DISCORD_BOT_TOKEN is not set in the environment.")
-        if not cfg.discord_allowed_user_ids:
-            raise RuntimeError(
-                "DISCORD_ALLOWED_USER_IDS is not set in the environment. "
-                "Provide a comma-separated list of Discord user IDs that are allowed to submit ideas."
-            )
-        if not cfg.discord_idea_channel_id:
-            logger.warning(
-                "DISCORD_IDEA_CHANNEL_ID is not set. The bot will only respond to Direct Messages. Set DISCORD_IDEA_CHANNEL_ID to also accept ideas from a guild channel."
-            )
-
-    def __init__(self, token: str, *, idea_channel_id: str = ""):
-        super().__init__()
+    def __init__(self, token: str, handler: MessageHandler, *, idea_channel_id: str = ""):
+        super().__init__(handler)
+        if not token:
+            raise RuntimeError("DISCORD_BOT_TOKEN is required.")
         self._token = token
         self._idea_channel_id = idea_channel_id
 
@@ -36,14 +24,7 @@ class DiscordConnector(BotConnector):
         self._client.event(self.on_message)
 
     def start(self) -> None:
-        if not self._token:
-            raise RuntimeError("DISCORD_BOT_TOKEN is not set in the environment.")
         self._client.run(self._token)
-
-    def stop(self) -> None:
-        loop = self._client.loop
-        if loop and loop.is_running():
-            loop.create_task(self._client.close())
 
     async def on_ready(self) -> None:
         logger.info(
@@ -62,11 +43,18 @@ class DiscordConnector(BotConnector):
             reply=message.reply,
         )
 
-        if self._message_handler is None:
-            return
         await self._message_handler(envelope)
 
     def _should_process_message(self, message: discord.Message) -> bool:
+        """
+        Platform-level filtering: determine if this Discord message should be routed
+        to the application handler based on channel/DM constraints.
+        
+        This is distinct from app-level auth (allowed user IDs), which is handled by
+        IdeaHandler. The connector's job is to filter based on platform routing rules:
+        - DMs are always accepted
+        - Guild messages are only accepted if a specific channel ID is configured and matches
+        """
         if isinstance(message.channel, discord.DMChannel):
             return True
         if not self._idea_channel_id:
