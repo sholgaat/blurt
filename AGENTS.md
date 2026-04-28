@@ -1,4 +1,4 @@
-# idea-inbox — AGENTS
+# blurt — AGENTS
 
 This project uses two agents/components:
 
@@ -18,7 +18,7 @@ This project uses two agents/components:
 - Location: bot/
 - Responsibilities (current):
   - Run either Discord or Telegram bot based on `BOT_PROVIDER`.
-  - Discord: listen for DMs and messages in #idea-inbox.
+  - Discord: listen for DMs and messages in Discord.
   - Telegram: listen for messages from allowed user IDs.
   - POST message content to backend /ideas.
   - Reply with the processed title + returned issue URL.

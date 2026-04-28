@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Quickstart setup for idea-inbox.
+# Quickstart setup for blurt.
 # Copies example env files if not present, prompts for required values,
 # and writes them in-place.
 set -euo pipefail
@@ -95,7 +95,7 @@ ensure_env_file "$ROOT_ENV" "$REPO_ROOT/.env.example" "Created .env from example
 
 printf '\n'
 printf '  ╔══════════════════════════════════════════╗\n'
-printf '  ║       idea-inbox — setup wizard          ║\n'
+  printf '  ║            blurt — setup wizard          ║\n'
 printf '  ╚══════════════════════════════════════════╝\n'
 printf '\n'
 echo "  Choose a setup mode:"
@@ -126,7 +126,7 @@ collect_github() {
 
   echo
   echo "  GITHUB_REPO: the repository where issues will be created, in owner/repo format."
-  echo "  e.g. myusername/idea-inbox"
+  echo "  e.g. myusername/blurt"
   prompt_value GITHUB_REPO "GITHUB_REPO"
   set_env "$BACKEND_ENV" "GITHUB_REPO" "$GITHUB_REPO"
 }

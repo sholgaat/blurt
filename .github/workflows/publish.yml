@@ -18,9 +18,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - image: idea-inbox-backend
+          - image: blurt-backend
             dockerfile: backend/Dockerfile
-          - image: idea-inbox-bot
+          - image: blurt-bot
             dockerfile: bot/Dockerfile
 
     steps:
@@ -45,6 +45,8 @@ jobs:
         with:
           context: .
           file: ${{ matrix.dockerfile }}
+          build-args: |
+            APP_VERSION=${{ github.ref_name }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

@@ -1,8 +1,8 @@
-# idea-inbox
+# blurt
 
 Turn shower thoughts into structured GitHub issues — just message your bot.
 
-Send a rough idea to your Discord or Telegram bot and idea-inbox uses an LLM to give it a title, summary, and tags, then files it as a GitHub issue automatically.
+Send a rough idea to your Discord or Telegram bot and blurt turns it into a polished GitHub issue automatically.
 
 ---
 
@@ -45,4 +45,3 @@ OLLAMA_MODEL=phi3:mini
 ```
 
 Model data is persisted in the `ollama-data` volume across restarts.
-

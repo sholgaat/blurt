@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -29,7 +30,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             github_client.http_client = None
 
 
-app = FastAPI(title="Idea Inbox Backend", version="0.0.1", lifespan=lifespan)
+app = FastAPI(title="Blurt Backend", version=os.getenv("APP_VERSION", "0.0.0"), lifespan=lifespan)
 
 
 class IdeaRequest(BaseModel):
