@@ -64,18 +64,16 @@ async def create_issue(
     metadata: Mapping[str, str] | None = None,
 ) -> str:
     cfg = get_backend_settings()
-    owner = cfg.github_repo_owner
-    repo = cfg.github_repo_name
+    repo = cfg.github_repo
     token = cfg.github_token
-    dry_run = cfg.dry_run
 
-    if not owner or not repo or not token:
+    if not repo or not token:
         raise RuntimeError(
-            "GITHUB_REPO_OWNER, GITHUB_REPO_NAME, and GITHUB_TOKEN must all be set."
+            "GITHUB_REPO and GITHUB_TOKEN must both be set."
         )
 
     issue_body = _build_issue_body(summary, tags, original_text, metadata)
-    url = f"https://api.github.com/repos/{owner}/{repo}/issues"
+    url = f"https://api.github.com/repos/{repo}/issues"
 
     headers = {
         "Authorization": f"token {token}",
@@ -87,11 +85,6 @@ async def create_issue(
         "body": issue_body,
         "labels": labels,
     }
-
-    if dry_run:
-        logger.info("Dry run enabled - not creating GitHub issue.")
-        logger.info("Issue payload: %s", payload)
-        return "https://example.com/dry-run-issue"
 
     if http_client is None:
         raise RuntimeError(

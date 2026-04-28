@@ -22,7 +22,6 @@ class BotSettings(BaseSettings):
 
     # Discord
     discord_bot_token: str = ""
-    discord_idea_channel_id: str = ""
 
     # Telegram
     telegram_bot_token: str = ""

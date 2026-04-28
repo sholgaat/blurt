@@ -13,8 +13,7 @@ class BackendSettings(BaseSettings):
     )
 
     github_token: str = ""
-    github_repo_owner: str = ""
-    github_repo_name: str = ""
+    github_repo: str = ""
     llm_provider: str = "gemini"
     gemini_api_key: str = ""
     openai_api_key: str = ""
@@ -22,7 +21,6 @@ class BackendSettings(BaseSettings):
     ollama_api_base: str = "http://localhost:11434"
     ollama_model: str = "llama3.2"
     model_timeout_seconds: int = 30
-    dry_run: bool = False
 
 
 @lru_cache(maxsize=1)
