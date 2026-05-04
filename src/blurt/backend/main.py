@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from blurt.backend import github_client
 from blurt.backend.github_client import create_issue
 from blurt.backend.llm import LlmError, call_ai_cleanup
+from blurt.backend.settings import get_backend_settings, validate_github_config
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -21,6 +22,7 @@ MAX_IDEA_LENGTH = 4096
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    validate_github_config(get_backend_settings())
     github_client.http_client = httpx.AsyncClient()
     try:
         yield

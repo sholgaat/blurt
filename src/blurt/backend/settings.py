@@ -26,3 +26,21 @@ class BackendSettings(BaseSettings):
 @lru_cache(maxsize=1)
 def get_backend_settings() -> BackendSettings:
     return BackendSettings()
+
+
+def validate_github_config(settings: BackendSettings) -> None:
+    """Validate that both github_token and github_repo are configured together.
+    
+    Raises ValueError if one is set but not the other.
+    """
+    token = (settings.github_token or "").strip()
+    repo = (settings.github_repo or "").strip()
+    
+    token_set = bool(token)
+    repo_set = bool(repo)
+    
+    if token_set != repo_set:  # XOR: exactly one is set
+        raise ValueError(
+            "Both GITHUB_TOKEN and GITHUB_REPO must be configured together. "
+            "Either set both or set neither."
+        )
