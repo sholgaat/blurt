@@ -1,6 +1,0 @@
-# All runtime deps for local development and running tests.
-# The Dockerfiles use service-specific requirements files instead.
--r backend/requirements.txt
--r bot/requirements.txt
-pytest
-pytest-asyncio

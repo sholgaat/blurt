@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import logging
 
-from bot.backend_client import IdeaBackendClient
-from bot.idea_handler import IdeaHandler
-from bot.settings import get_bot_settings
+from blurt.bot.backend_client import IdeaBackendClient
+from blurt.bot.idea_handler import IdeaHandler
+from blurt.bot.settings import get_bot_settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

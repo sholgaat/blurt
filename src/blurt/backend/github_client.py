@@ -5,7 +5,7 @@ from collections.abc import Iterable, Mapping
 
 import httpx
 
-from backend.settings import get_backend_settings
+from blurt.backend.settings import get_backend_settings
 
 logger = logging.getLogger(__name__)
 

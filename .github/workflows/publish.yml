@@ -23,9 +23,9 @@ jobs:
       matrix:
         include:
           - image: blurt-backend
-            dockerfile: backend/Dockerfile
+            dockerfile: src/blurt/backend/Dockerfile
           - image: blurt-bot
-            dockerfile: bot/Dockerfile
+            dockerfile: src/blurt/bot/Dockerfile
 
     steps:
       - uses: actions/checkout@v4

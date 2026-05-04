@@ -5,7 +5,7 @@ import types
 
 import pytest
 
-from backend.llm.base import CleanedIdea, LlmError
+from blurt.backend.llm.base import CleanedIdea, LlmError
 
 
 class FakeAnthropicMessages:
@@ -27,7 +27,7 @@ class FakeAnthropicClient:
 
 
 def test_anthropic_cleanup_returns_normalized_idea():
-    from backend.llm.providers.anthropic import AnthropicLlmProvider
+    from blurt.backend.llm.providers.anthropic import AnthropicLlmProvider
 
     response = CleanedIdea(
         title="Build notes",
@@ -52,10 +52,10 @@ def test_anthropic_cleanup_returns_normalized_idea():
 
 
 def test_anthropic_cleanup_requires_api_key(monkeypatch):
-    from backend.llm.providers.anthropic import AnthropicLlmProvider
+    from blurt.backend.llm.providers.anthropic import AnthropicLlmProvider
 
     monkeypatch.setattr(
-        "backend.llm.providers.anthropic.get_backend_settings",
+        "blurt.backend.llm.providers.anthropic.get_backend_settings",
         lambda: type("Cfg", (), {"anthropic_api_key": ""})(),
     )
 
@@ -64,7 +64,7 @@ def test_anthropic_cleanup_requires_api_key(monkeypatch):
 
 
 def test_factory_selects_anthropic_provider(monkeypatch):
-    import backend.llm.factory as factory_module
+    import blurt.backend.llm.factory as factory_module
 
     class FakeProvider:
         provider_key = "anthropic"

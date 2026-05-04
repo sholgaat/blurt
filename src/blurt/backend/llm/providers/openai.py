@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import openai
 
-from backend.llm.base import BaseLlmProvider, CleanedIdea, LlmError, SYSTEM_INSTRUCTION
-from backend.llm._logging import log_token_usage
-from backend.settings import get_backend_settings
+from blurt.backend.llm.base import BaseLlmProvider, CleanedIdea, LlmError, SYSTEM_INSTRUCTION
+from blurt.backend.llm._logging import log_token_usage
+from blurt.backend.settings import get_backend_settings
 
 
 class OpenAILlmProvider(BaseLlmProvider):

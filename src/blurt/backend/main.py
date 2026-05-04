@@ -9,9 +9,9 @@ import httpx
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from backend import github_client
-from backend.github_client import create_issue
-from backend.llm import LlmError, call_ai_cleanup
+from blurt.backend import github_client
+from blurt.backend.github_client import create_issue
+from blurt.backend.llm import LlmError, call_ai_cleanup
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

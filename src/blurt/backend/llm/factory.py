@@ -3,12 +3,12 @@ from __future__ import annotations
 import logging
 from functools import lru_cache
 
-from backend.llm.base import BaseLlmProvider, LlmError
-from backend.llm.providers.anthropic import AnthropicLlmProvider
-from backend.llm.providers.gemini import GeminiLlmProvider
-from backend.llm.providers.ollama import OllamaLlmProvider
-from backend.llm.providers.openai import OpenAILlmProvider
-from backend.settings import get_backend_settings
+from blurt.backend.llm.base import BaseLlmProvider, LlmError
+from blurt.backend.llm.providers.anthropic import AnthropicLlmProvider
+from blurt.backend.llm.providers.gemini import GeminiLlmProvider
+from blurt.backend.llm.providers.ollama import OllamaLlmProvider
+from blurt.backend.llm.providers.openai import OpenAILlmProvider
+from blurt.backend.settings import get_backend_settings
 
 LOGGER = logging.getLogger(__name__)
 

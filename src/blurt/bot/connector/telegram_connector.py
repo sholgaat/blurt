@@ -3,7 +3,7 @@ from __future__ import annotations
 from telegram import Update
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
 
-from bot.connector.bot_connector import BotConnector, MessageEnvelope, MessageHandler as MessageHandlerType
+from blurt.bot.connector.bot_connector import BotConnector, MessageEnvelope, MessageHandler as MessageHandlerType
 
 
 class TelegramConnector(BotConnector):

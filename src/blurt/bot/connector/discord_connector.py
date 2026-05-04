@@ -4,7 +4,7 @@ import logging
 
 import discord
 
-from bot.connector.bot_connector import BotConnector, MessageEnvelope, MessageHandler
+from blurt.bot.connector.bot_connector import BotConnector, MessageEnvelope, MessageHandler
 
 logger = logging.getLogger(__name__)
 

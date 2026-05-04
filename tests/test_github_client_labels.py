@@ -1,4 +1,4 @@
-from backend.github_client import _prepare_labels
+from blurt.backend.github_client import _prepare_labels
 
 
 def test_prepare_labels_merges_tags_and_source_label_discord():
