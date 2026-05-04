@@ -1,0 +1,48 @@
+# Git
+.git/
+.gitignore
+
+# Python
+.venv/
+venv/
+ENV/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+.eggs/
+dist/
+build/
+.installed.cfg
+MANIFEST
+src/blurt/_version.py
+
+# Tests
+tests/
+
+# Dev / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Env files (never bake secrets into images)
+.env
+.env.*
+
+# Docs / repo metadata
+*.md
+LICENSE
+AGENTS.md
+
+# Misc
+.opencode/

@@ -32,7 +32,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             github_client.http_client = None
 
 
-app = FastAPI(title="Blurt Backend", version=os.getenv("APP_VERSION", "0.0.0"), lifespan=lifespan)
+app = FastAPI(title="Blurt Backend", version=os.getenv("APP_VERSION") or "0.0.1", lifespan=lifespan)
 
 
 class IdeaRequest(BaseModel):

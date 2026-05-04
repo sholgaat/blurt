@@ -6,6 +6,8 @@
 .env.*.local
 
 # Python
+src/blurt/_version.py
+blurt.egg-info/
 __pycache__/
 *.py[cod]
 *$py.class
