@@ -8,4 +8,7 @@ WORKDIR /app
 COPY . .
 RUN pip install --no-cache-dir .
 
+RUN adduser --disabled-password --gecos "" appuser
+USER appuser
+
 CMD ["python", "-m", "blurt.bot.main"]
