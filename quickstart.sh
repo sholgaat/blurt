@@ -139,6 +139,7 @@ RAW_INSTALL_DIR="${RAW_INSTALL_DIR:-~/blurt}"
 INSTALL_DIR="$(expand_tilde "$RAW_INSTALL_DIR")"
 
 mkdir -p "$INSTALL_DIR"
+INSTALL_DIR="$(cd "$INSTALL_DIR" && pwd)"
 cd "$INSTALL_DIR"
 success "Using install directory: $INSTALL_DIR"
 
