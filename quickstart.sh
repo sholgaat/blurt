@@ -1,28 +1,101 @@
 #!/usr/bin/env bash
 # Quickstart setup for blurt.
-# Copies example env files if not present, prompts for required values,
+# Prompts for install directory, fetches docker-compose.yml, copies example env
+# files if not present, prompts for required values (preserving existing ones),
 # and writes them in-place.
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BLURT_RAW_BASE="https://raw.githubusercontent.com/sholgaat/blurt/main"
 
-# ── helpers ──────────────────────────────────────────────────────────────────
+# ── pre-flight checks ─────────────────────────────────────────────────────────
+
+if ! command -v docker &>/dev/null; then
+  printf '\n  ✗ Docker not found.\n'
+  printf '    Install it from https://docs.docker.com/get-docker/ then re-run.\n\n'
+  exit 1
+fi
+
+if ! docker compose version &>/dev/null; then
+  printf '\n  ✗ Docker Compose v2 not found.\n'
+  printf '    Make sure you have Docker Desktop or the compose plugin installed.\n'
+  printf '    See https://docs.docker.com/compose/install/\n\n'
+  exit 1
+fi
+
+# ── helpers ───────────────────────────────────────────────────────────────────
 
 info()    { printf '\n%s\n' "$*"; }
 success() { printf '  OK: %s\n' "$*"; }
 
+# Expand a leading ~ to $HOME (works in bash and zsh on Linux and macOS).
+expand_tilde() {
+  local path="$1"
+  printf '%s' "${path/#\~/$HOME}"
+}
+
+# Read the current value of KEY from FILE (empty string if not found).
+get_env() {
+  local file="$1"
+  local key="$2"
+  if [[ ! -f "$file" ]]; then printf ''; return; fi
+  local line
+  line="$(grep -m1 "^${key}=" "$file" 2>/dev/null || true)"
+  printf '%s' "${line#*=}"
+}
+
+# Write KEY=VALUE into a file, replacing the existing KEY=... line.
+set_env() {
+  local file="$1"
+  local key="$2"
+  local value="$3"
+  local tmp_file
+  tmp_file="$(mktemp "${file}.XXXXXX")"
+  awk -v key="$key" -v value="$value" '
+    BEGIN { updated = 0 }
+    $0 ~ "^" key "=" {
+      print key "=" value
+      updated = 1
+      next
+    }
+    { print }
+    END { if (!updated) { print key "=" value } }
+  ' "$file" > "$tmp_file"
+  mv "$tmp_file" "$file"
+}
+
+# Prompt for a required value.
+# For secrets: shows [already set] if a current value exists; enter keeps it.
+# For non-secrets: shows the current value as the default; enter keeps it.
 prompt_value() {
   local var_name="$1"
   local prompt_text="$2"
   local secret="${3:-false}"
+  local current_value="${4:-}"
   local input_value
 
   while true; do
     if [[ "$secret" == true ]]; then
-      read -r -s -p "  $prompt_text: " input_value
-      echo
+      if [[ -n "$current_value" ]]; then
+        read -r -s -p "  $prompt_text [already set — enter to keep, or paste new value]: " input_value
+        echo
+        if [[ -z "$input_value" ]]; then
+          printf -v "$var_name" '%s' "$current_value"
+          return
+        fi
+      else
+        read -r -s -p "  $prompt_text: " input_value
+        echo
+      fi
     else
-      read -r -p "  $prompt_text: " input_value
+      if [[ -n "$current_value" ]]; then
+        read -r -p "  $prompt_text [$current_value]: " input_value
+        if [[ -z "$input_value" ]]; then
+          printf -v "$var_name" '%s' "$current_value"
+          return
+        fi
+      else
+        read -r -p "  $prompt_text: " input_value
+      fi
     fi
 
     if [[ -n "$input_value" ]]; then
@@ -45,59 +118,77 @@ prompt_optional() {
 ensure_env_file() {
   local file="$1"
   local example="$2"
-  local created_message="$3"
-  local exists_message="$4"
-
   if [[ ! -f "$file" ]]; then
     cp "$example" "$file"
-    success "$created_message"
+    success "Created $(basename "$file") from example"
   else
-    success "$exists_message"
+    success "$(basename "$file") already exists — updating values in place"
   fi
 }
 
-# Write KEY=VALUE into a file, replacing the existing KEY=... line.
-set_env() {
-  local file="$1"
-  local key="$2"
-  local value="$3"
-  local tmp_file
-
-  tmp_file="$(mktemp "${file}.XXXXXX")"
-  awk -v key="$key" -v value="$value" '
-    BEGIN { updated = 0 }
-    $0 ~ "^" key "=" {
-      print key "=" value
-      updated = 1
-      next
-    }
-    { print }
-    END {
-      if (!updated) {
-        print key "=" value
-      }
-    }
-  ' "$file" > "$tmp_file"
-  mv "$tmp_file" "$file"
-}
-
-# ── env file setup ────────────────────────────────────────────────────────────
-
-BACKEND_ENV="$REPO_ROOT/.env.backend"
-BOT_ENV="$REPO_ROOT/.env.bot"
-ROOT_ENV="$REPO_ROOT/.env"
-
-ensure_env_file "$BACKEND_ENV" "$REPO_ROOT/.env.backend.example" "Created .env.backend from example" ".env.backend already exists — updating values in place"
-ensure_env_file "$BOT_ENV" "$REPO_ROOT/.env.bot.example" "Created .env.bot from example" ".env.bot already exists — updating values in place"
-ensure_env_file "$ROOT_ENV" "$REPO_ROOT/.env.example" "Created .env from example" ".env already exists — updating values in place"
-
-# ── setup mode ────────────────────────────────────────────────────────────────
+# ── install directory ─────────────────────────────────────────────────────────
 
 printf '\n'
 printf '  ╔══════════════════════════════════════════╗\n'
-  printf '  ║            blurt — setup wizard          ║\n'
+printf '  ║            blurt — setup wizard          ║\n'
 printf '  ╚══════════════════════════════════════════╝\n'
 printf '\n'
+
+read -r -p "  Install directory [~/blurt]: " RAW_INSTALL_DIR
+RAW_INSTALL_DIR="${RAW_INSTALL_DIR:-~/blurt}"
+INSTALL_DIR="$(expand_tilde "$RAW_INSTALL_DIR")"
+
+mkdir -p "$INSTALL_DIR"
+cd "$INSTALL_DIR"
+success "Using install directory: $INSTALL_DIR"
+
+# ── fetch docker-compose.yml ──────────────────────────────────────────────────
+
+COMPOSE_FILE="$INSTALL_DIR/docker-compose.yml"
+COMPOSE_URL="$BLURT_RAW_BASE/docker-compose.yml"
+
+if curl -fsSL "$COMPOSE_URL" -o "$INSTALL_DIR/docker-compose.yml.new" 2>/dev/null; then
+  if [[ -f "$COMPOSE_FILE" ]] && ! diff -q "$COMPOSE_FILE" "$INSTALL_DIR/docker-compose.yml.new" &>/dev/null; then
+    success "docker-compose.yml updated to latest version"
+  elif [[ ! -f "$COMPOSE_FILE" ]]; then
+    success "docker-compose.yml downloaded"
+  fi
+  mv "$INSTALL_DIR/docker-compose.yml.new" "$COMPOSE_FILE"
+else
+  rm -f "$INSTALL_DIR/docker-compose.yml.new"
+  if [[ ! -f "$COMPOSE_FILE" ]]; then
+    printf '  ✗ Could not fetch docker-compose.yml from GitHub.\n'
+    printf '    Check your internet connection and try again.\n\n'
+    exit 1
+  else
+    printf '  Warning: could not fetch latest docker-compose.yml — using existing file.\n'
+  fi
+fi
+
+# ── env file setup ────────────────────────────────────────────────────────────
+
+BACKEND_ENV="$INSTALL_DIR/.env.backend"
+BOT_ENV="$INSTALL_DIR/.env.bot"
+ROOT_ENV="$INSTALL_DIR/.env"
+
+# Fetch example files if needed (only when env file doesn't already exist)
+for pair in ".env.backend.example:$BACKEND_ENV" ".env.bot.example:$BOT_ENV" ".env.example:$ROOT_ENV"; do
+  example_name="${pair%%:*}"
+  target="${pair##*:}"
+  if [[ ! -f "$target" ]]; then
+    if ! curl -fsSL "$BLURT_RAW_BASE/$example_name" -o "$target" 2>/dev/null; then
+      printf '  ✗ Could not fetch %s from GitHub.\n' "$example_name"
+      exit 1
+    fi
+    success "Created $(basename "$target") from example"
+  else
+    success "$(basename "$target") already exists — updating values in place"
+  fi
+done
+
+# ── setup mode ────────────────────────────────────────────────────────────────
+
+echo
 echo "  Choose a setup mode:"
 echo
 echo "  [1] Recommended — Discord bot + Gemini  (fastest, fewest questions)"
@@ -121,13 +212,15 @@ collect_github() {
 
   echo "  GITHUB_TOKEN: a Personal Access Token (classic: 'repo' scope;"
   echo "    fine-grained: Issues read/write + Labels read/write)."
-  prompt_value GITHUB_TOKEN "GITHUB_TOKEN" true
+  local cur; cur="$(get_env "$BACKEND_ENV" "GITHUB_TOKEN")"
+  prompt_value GITHUB_TOKEN "GITHUB_TOKEN" true "$cur"
   set_env "$BACKEND_ENV" "GITHUB_TOKEN" "$GITHUB_TOKEN"
 
   echo
   echo "  GITHUB_REPO: the repository where issues will be created, in owner/repo format."
   echo "  e.g. myusername/blurt"
-  prompt_value GITHUB_REPO "GITHUB_REPO"
+  cur="$(get_env "$BACKEND_ENV" "GITHUB_REPO")"
+  prompt_value GITHUB_REPO "GITHUB_REPO" false "$cur"
   set_env "$BACKEND_ENV" "GITHUB_REPO" "$GITHUB_REPO"
 }
 
@@ -139,13 +232,20 @@ collect_discord() {
   echo "  DISCORD_BOT_TOKEN: the token from the Discord Developer Portal."
   echo "  See https://discord.com/developers/applications"
   echo "  The bot needs the 'Message Content' privileged intent enabled."
-  prompt_value DISCORD_BOT_TOKEN "DISCORD_BOT_TOKEN" true
+  local cur; cur="$(get_env "$BOT_ENV" "DISCORD_BOT_TOKEN")"
+  prompt_value DISCORD_BOT_TOKEN "DISCORD_BOT_TOKEN" true "$cur"
   set_env "$BOT_ENV" "DISCORD_BOT_TOKEN" "$DISCORD_BOT_TOKEN"
 
   echo
   echo "  Your Discord user ID: enable Developer Mode in Discord (Settings >"
   echo "  Advanced > Developer Mode), then right-click yourself and choose 'Copy User ID'."
-  prompt_value DISCORD_USER_ID "Your Discord user ID"
+  # Extract current discord ID from ALLOWED_USER_IDS if present
+  local cur_ids; cur_ids="$(get_env "$BOT_ENV" "ALLOWED_USER_IDS")"
+  local cur_discord_id=""
+  if [[ "$cur_ids" =~ \"discord:([^\"]+)\" ]]; then
+    cur_discord_id="${BASH_REMATCH[1]}"
+  fi
+  prompt_value DISCORD_USER_ID "Your Discord user ID" false "$cur_discord_id"
 }
 
 # ── shared: Telegram config ───────────────────────────────────────────────────
@@ -155,12 +255,18 @@ collect_telegram() {
 
   echo "  TELEGRAM_BOT_TOKEN: the token BotFather gave you when you created the bot."
   echo "  See https://core.telegram.org/bots#botfather"
-  prompt_value TELEGRAM_BOT_TOKEN "TELEGRAM_BOT_TOKEN" true
+  local cur; cur="$(get_env "$BOT_ENV" "TELEGRAM_BOT_TOKEN")"
+  prompt_value TELEGRAM_BOT_TOKEN "TELEGRAM_BOT_TOKEN" true "$cur"
   set_env "$BOT_ENV" "TELEGRAM_BOT_TOKEN" "$TELEGRAM_BOT_TOKEN"
 
   echo
   echo "  Your Telegram user ID: message @userinfobot on Telegram to find it."
-  prompt_value TELEGRAM_USER_ID "Your Telegram user ID"
+  local cur_ids; cur_ids="$(get_env "$BOT_ENV" "ALLOWED_USER_IDS")"
+  local cur_telegram_id=""
+  if [[ "$cur_ids" =~ \"telegram:([^\"]+)\" ]]; then
+    cur_telegram_id="${BASH_REMATCH[1]}"
+  fi
+  prompt_value TELEGRAM_USER_ID "Your Telegram user ID" false "$cur_telegram_id"
 }
 
 # ── recommended path ──────────────────────────────────────────────────────────
@@ -169,7 +275,8 @@ if [[ "$SETUP_MODE" == "recommended" ]]; then
 
   info "--- Gemini ---"
   echo "  GEMINI_API_KEY: get one free at https://aistudio.google.com/app/apikey"
-  prompt_value GEMINI_API_KEY "GEMINI_API_KEY" true
+  cur="$(get_env "$BACKEND_ENV" "GEMINI_API_KEY")"
+  prompt_value GEMINI_API_KEY "GEMINI_API_KEY" true "$cur"
   set_env "$BACKEND_ENV" "LLM_PROVIDER" "gemini"
   set_env "$BACKEND_ENV" "GEMINI_API_KEY" "$GEMINI_API_KEY"
   set_env "$BACKEND_ENV" "OPENAI_API_KEY" ""
@@ -203,7 +310,8 @@ if [[ "$SETUP_MODE" == "custom" ]]; then
       1)
         echo
         echo "  GEMINI_API_KEY: get one free at https://aistudio.google.com/app/apikey"
-        prompt_value GEMINI_API_KEY "GEMINI_API_KEY" true
+        cur="$(get_env "$BACKEND_ENV" "GEMINI_API_KEY")"
+        prompt_value GEMINI_API_KEY "GEMINI_API_KEY" true "$cur"
         set_env "$BACKEND_ENV" "LLM_PROVIDER" "gemini"
         set_env "$BACKEND_ENV" "GEMINI_API_KEY" "$GEMINI_API_KEY"
         set_env "$BACKEND_ENV" "OPENAI_API_KEY" ""
@@ -212,7 +320,8 @@ if [[ "$SETUP_MODE" == "custom" ]]; then
         ;;
       2)
         echo
-        prompt_value OPENAI_API_KEY "OPENAI_API_KEY" true
+        cur="$(get_env "$BACKEND_ENV" "OPENAI_API_KEY")"
+        prompt_value OPENAI_API_KEY "OPENAI_API_KEY" true "$cur"
         set_env "$BACKEND_ENV" "LLM_PROVIDER" "openai"
         set_env "$BACKEND_ENV" "OPENAI_API_KEY" "$OPENAI_API_KEY"
         set_env "$BACKEND_ENV" "GEMINI_API_KEY" ""
@@ -221,7 +330,8 @@ if [[ "$SETUP_MODE" == "custom" ]]; then
         ;;
       3)
         echo
-        prompt_value ANTHROPIC_API_KEY "ANTHROPIC_API_KEY" true
+        cur="$(get_env "$BACKEND_ENV" "ANTHROPIC_API_KEY")"
+        prompt_value ANTHROPIC_API_KEY "ANTHROPIC_API_KEY" true "$cur"
         set_env "$BACKEND_ENV" "LLM_PROVIDER" "anthropic"
         set_env "$BACKEND_ENV" "ANTHROPIC_API_KEY" "$ANTHROPIC_API_KEY"
         set_env "$BACKEND_ENV" "GEMINI_API_KEY" ""
@@ -229,6 +339,7 @@ if [[ "$SETUP_MODE" == "custom" ]]; then
         break
         ;;
       4)
+        cur="$(get_env "$BACKEND_ENV" "OLLAMA_API_BASE")"
         prompt_optional OLLAMA_API_BASE "OLLAMA_API_BASE (default: http://localhost:11434)"
         set_env "$BACKEND_ENV" "LLM_PROVIDER" "ollama"
         set_env "$BACKEND_ENV" "GEMINI_API_KEY" ""
@@ -264,7 +375,6 @@ if [[ "$SETUP_MODE" == "custom" ]]; then
   done
   set_env "$ROOT_ENV" "COMPOSE_PROFILES" "$COMPOSE_PROFILES"
 
-  # Provider-specific tokens
   [[ "$COMPOSE_PROFILES" == *"discord"*  ]] && collect_discord
   [[ "$COMPOSE_PROFILES" == *"telegram"* ]] && collect_telegram
 
@@ -290,11 +400,15 @@ fi
 
 info "=== Setup complete ==="
 echo
-echo "Next steps:"
-echo "  1. Start the stack:"
-echo "       docker compose up -d"
+echo "Start the stack:"
+echo "  cd $INSTALL_DIR"
+echo "  docker compose up -d"
 echo
-echo "  2. Watch logs:"
-echo "       docker compose logs -f"
+echo "Watch logs:"
+echo "  docker compose logs -f"
 echo
-echo "  3. Message your bot and it will reply with a link to your new GitHub issue!"
+echo "To update blurt in future, re-run this script. It will fetch the latest"
+echo "configuration and walk you through any new settings — existing values are"
+echo "preserved unless you choose to change them."
+echo
+echo "Message your bot and watch the issues appear."

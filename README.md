@@ -14,14 +14,21 @@ Send a rough idea to your Discord or Telegram bot and blurt turns it into a poli
 - An LLM API key — Gemini recommended ([free tier available](https://aistudio.google.com/app/apikey))
 - A Discord bot token ([Discord Developer Portal](https://discord.com/developers/applications)) or a Telegram bot token ([@BotFather](https://t.me/botfather))
 
-**Then:**
+**Then run:**
 
 ```bash
-./quickstart.sh
-docker compose up -d
+curl -fsSL https://raw.githubusercontent.com/sholgaat/blurt/main/quickstart.sh -o /tmp/blurt-setup.sh && bash /tmp/blurt-setup.sh
 ```
 
-That's it. Message your bot and watch the issues appear.
+The script will choose an install directory, collect your credentials, and tell you when to run `docker compose up -d`.
+
+**Prefer to inspect before running?**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sholgaat/blurt/main/quickstart.sh -o blurt-setup.sh
+# read blurt-setup.sh
+bash blurt-setup.sh
+```
 
 ---
 
