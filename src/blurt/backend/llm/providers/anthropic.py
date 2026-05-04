@@ -66,9 +66,10 @@ class AnthropicLlmProvider(BaseLlmProvider):
         return getattr(usage, "output_tokens", None)
 
     def get_total_tokens(self, response) -> int | None:
-        """Extract or derive total token count from Anthropic response."""
-        usage = getattr(response, "usage", None)
-        if not usage:
-            return None
-
-        return getattr(usage, "total_tokens", None)
+        """Derive total token count from input + output tokens."""
+        input_tokens = self.get_input_tokens(response)
+        output_tokens = self.get_output_tokens(response)
+        
+        if input_tokens is not None and output_tokens is not None:
+            return input_tokens + output_tokens
+        return None
