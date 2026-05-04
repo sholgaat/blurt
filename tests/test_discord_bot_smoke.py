@@ -84,10 +84,26 @@ async def test_bot_ignores_own_messages():
 
 
 @pytest.mark.asyncio
-async def test_guild_message_is_dispatched():
-    """Guild messages are accepted from any channel — auth is handled downstream."""
+async def test_guild_message_is_ignored_without_channel_config():
+    """Guild messages are ignored by default (DM-only mode)."""
     connector = _make_connector()
     message, _ = _make_message(author_id=_ALLOWED_USER_ID, channel_type="text")
+
+    with _patch_connector_user(connector, MagicMock()):
+        await connector.on_message(message)
+
+    connector._message_handler.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_guild_message_is_dispatched_from_allowed_channel():
+    """Guild messages are accepted if channel is in allowed_channel_ids."""
+    channel_id = 12345
+    connector = _make_connector()
+    connector._allowed_channel_ids = {channel_id}
+    
+    message, _ = _make_message(author_id=_ALLOWED_USER_ID, channel_type="text")
+    message.channel.id = channel_id
 
     with _patch_connector_user(connector, MagicMock()):
         await connector.on_message(message)

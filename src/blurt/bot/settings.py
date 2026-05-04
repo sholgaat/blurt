@@ -22,6 +22,10 @@ class BotSettings(BaseSettings):
 
     # Discord
     discord_bot_token: str = ""
+    # Optional Discord channel IDs where the bot listens. If empty, DM-only mode.
+    # If set, bot listens to DMs AND these channels.
+    # Format: comma-separated or JSON array of numeric channel IDs
+    discord_channel_ids: set[int] = Field(default_factory=set)
 
     # Telegram
     telegram_bot_token: str = ""

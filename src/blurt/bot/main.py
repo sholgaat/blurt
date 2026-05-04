@@ -34,6 +34,7 @@ def main() -> None:
         connector = DiscordConnector(
             cfg.discord_bot_token,
             handler.handle_message,
+            allowed_channel_ids=cfg.discord_channel_ids,
         )
     else:
         raise RuntimeError(
