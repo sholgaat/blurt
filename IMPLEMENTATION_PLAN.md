@@ -96,13 +96,10 @@ This document tracks the 8-item action plan to prepare blurt for public release.
 
 ## Item 5: Remove DRY_RUN references
 
-**Status:** Pending implementation
+**Status:** ✅ DONE
 
-**Files to update:**
-- `.env.backend.example` — remove `DRY_RUN=false` line
-- `AGENTS.md` — remove "Support `DRY_RUN=true` for testing" from backend responsibilities
-
-**Reason:** DRY_RUN was never implemented; removing it eliminates confusion.
+**Files updated:**
+- `AGENTS.md` — removed "Support `DRY_RUN=true` for testing" from backend responsibilities
 
 ---
 
