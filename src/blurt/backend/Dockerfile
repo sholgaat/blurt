@@ -13,7 +13,11 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY . .
-RUN pip install --no-cache-dir .
+# setuptools-scm needs git history to infer the version, which isn't available
+# in the build context. Provide it explicitly; strip leading 'v' (v1.2.3 → 1.2.3).
+# Local dev builds pass APP_VERSION=0.0.0.dev0 via docker-compose.override.yml.
+RUN SETUPTOOLS_SCM_PRETEND_VERSION="${APP_VERSION#v}" \
+    pip install --no-cache-dir .
 
 RUN adduser --disabled-password --gecos "" appuser
 USER appuser

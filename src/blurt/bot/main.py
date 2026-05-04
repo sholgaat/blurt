@@ -24,12 +24,12 @@ def main() -> None:
     )
 
     if provider == "telegram":
-        from bot.connector.telegram_connector import TelegramConnector
+        from blurt.bot.connector.telegram_connector import TelegramConnector
 
         connector = TelegramConnector(cfg.telegram_bot_token, handler.handle_message)
 
     elif provider == "discord":
-        from bot.connector.discord_connector import DiscordConnector
+        from blurt.bot.connector.discord_connector import DiscordConnector
 
         connector = DiscordConnector(
             cfg.discord_bot_token,

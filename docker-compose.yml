@@ -1,6 +1,6 @@
 services:
   backend:
-    image: ghcr.io/sholgaat/blurt-backend:latest
+    image: ghcr.io/sholgaat/blurt-backend:${BLURT_VERSION:-latest}
     restart: unless-stopped
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -19,7 +19,7 @@ services:
 
   bot-discord:
     profiles: [discord]
-    image: ghcr.io/sholgaat/blurt-bot:latest
+    image: ghcr.io/sholgaat/blurt-bot:${BLURT_VERSION:-latest}
     restart: unless-stopped
     env_file:
       - .env.bot
@@ -31,7 +31,7 @@ services:
 
   bot-telegram:
     profiles: [telegram]
-    image: ghcr.io/sholgaat/blurt-bot:latest
+    image: ghcr.io/sholgaat/blurt-bot:${BLURT_VERSION:-latest}
     restart: unless-stopped
     env_file:
       - .env.bot

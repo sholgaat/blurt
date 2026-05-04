@@ -5,13 +5,19 @@ services:
     build:
       context: .
       dockerfile: src/blurt/backend/Dockerfile
+      args:
+        APP_VERSION: 0.0.0.dev0
 
   bot-discord:
     build:
       context: .
       dockerfile: src/blurt/bot/Dockerfile
+      args:
+        APP_VERSION: 0.0.0.dev0
 
   bot-telegram:
     build:
       context: .
       dockerfile: src/blurt/bot/Dockerfile
+      args:
+        APP_VERSION: 0.0.0.dev0

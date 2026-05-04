@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=68.0", "wheel"]
+requires = ["setuptools>=68.0", "setuptools-scm>=8.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "blurt"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Discord/Telegram bot that captures ideas, processes them with LLMs, and creates GitHub issues"
 requires-python = ">=3.12"
 dependencies = [
@@ -26,6 +26,7 @@ dependencies = [
 dev = [
     "pytest>=9.0.0",
     "pytest-asyncio>=0.24.0",
+    "setuptools-scm>=8.0",
 ]
 
 [tool.setuptools]
@@ -33,6 +34,11 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools_scm]
+# Version is derived from git tags (e.g. v1.2.3 → 1.2.3).
+# Between tags it produces e.g. 1.2.3.dev4+gabcdef.
+write_to = "src/blurt/_version.py"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
