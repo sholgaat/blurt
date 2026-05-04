@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from backend.llm.base import CleanedIdea
+from blurt.backend.llm.base import CleanedIdea
 
 
 def test_tags_are_lowercased():

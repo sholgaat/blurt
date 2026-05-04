@@ -1,9 +1,9 @@
 from fastapi.testclient import TestClient
 import pytest
 
-from backend import main
-from backend.llm import LlmError
-from backend.llm.base import CleanedIdea
+from blurt.backend import main
+from blurt.backend.llm import LlmError
+from blurt.backend.llm.base import CleanedIdea
 
 
 @pytest.fixture

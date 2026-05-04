@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from backend.llm.base import CleanedIdea, LlmError
+from blurt.backend.llm.base import CleanedIdea, LlmError
 
 
 class FakeResponseError(Exception):
@@ -28,7 +28,7 @@ class FakeOllamaClient:
 
 
 def test_ollama_cleanup_returns_normalized_idea():
-    from backend.llm.providers.ollama import OllamaLlmProvider
+    from blurt.backend.llm.providers.ollama import OllamaLlmProvider
 
     response = {
         "response": json.dumps(
@@ -56,7 +56,7 @@ def test_ollama_cleanup_returns_normalized_idea():
 
 
 def test_ollama_cleanup_rejects_empty_response():
-    from backend.llm.providers.ollama import OllamaLlmProvider
+    from blurt.backend.llm.providers.ollama import OllamaLlmProvider
 
     provider = OllamaLlmProvider(client=FakeOllamaClient(response={"response": "   "}))
 
@@ -65,7 +65,7 @@ def test_ollama_cleanup_rejects_empty_response():
 
 
 def test_ollama_cleanup_reports_model_not_found():
-    from backend.llm.providers.ollama import OllamaLlmProvider
+    from blurt.backend.llm.providers.ollama import OllamaLlmProvider
 
     provider = OllamaLlmProvider(
         client=FakeOllamaClient(exc=FakeResponseError("not found"))
@@ -77,7 +77,7 @@ def test_ollama_cleanup_reports_model_not_found():
 
 
 def test_ollama_cleanup_reports_timeout():
-    from backend.llm.providers.ollama import OllamaLlmProvider
+    from blurt.backend.llm.providers.ollama import OllamaLlmProvider
 
     provider = OllamaLlmProvider(client=FakeOllamaClient(exc=TimeoutError("timeout")))
 
@@ -86,7 +86,7 @@ def test_ollama_cleanup_reports_timeout():
 
 
 def test_ollama_cleanup_reports_connection_error():
-    from backend.llm.providers.ollama import OllamaLlmProvider
+    from blurt.backend.llm.providers.ollama import OllamaLlmProvider
 
     provider = OllamaLlmProvider(
         client=FakeOllamaClient(exc=ConnectionError("connection refused"))
@@ -97,7 +97,7 @@ def test_ollama_cleanup_reports_connection_error():
 
 
 def test_factory_selects_ollama_provider(monkeypatch):
-    import backend.llm.factory as factory_module
+    import blurt.backend.llm.factory as factory_module
 
     class FakeProvider:
         provider_key = "ollama"

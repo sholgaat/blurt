@@ -5,7 +5,7 @@ import types
 
 import pytest
 
-from backend.llm.base import CleanedIdea, LlmError
+from blurt.backend.llm.base import CleanedIdea, LlmError
 
 
 class FakeOpenAIClient:
@@ -31,7 +31,7 @@ class FakeOpenAIClient:
         )
 
 def test_openai_cleanup_returns_normalized_idea():
-    from backend.llm.providers.openai import OpenAILlmProvider
+    from blurt.backend.llm.providers.openai import OpenAILlmProvider
 
     response = CleanedIdea(
         title="Build notes",
@@ -60,10 +60,10 @@ def test_openai_cleanup_returns_normalized_idea():
 
 
 def test_openai_cleanup_requires_api_key(monkeypatch):
-    from backend.llm.providers.openai import OpenAILlmProvider
+    from blurt.backend.llm.providers.openai import OpenAILlmProvider
 
     monkeypatch.setattr(
-        "backend.llm.providers.openai.get_backend_settings",
+        "blurt.backend.llm.providers.openai.get_backend_settings",
         lambda: type("Cfg", (), {"openai_api_key": ""})(),
     )
 
@@ -72,7 +72,7 @@ def test_openai_cleanup_requires_api_key(monkeypatch):
 
 
 def test_factory_selects_openai_provider(monkeypatch):
-    import backend.llm.factory as factory_module
+    import blurt.backend.llm.factory as factory_module
 
     class FakeProvider:
         provider_key = "openai"

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import logging
 
-from backend.llm.base import CleanedIdea, LlmError
-from backend.llm.factory import get_llm_provider
+from blurt.backend.llm.base import CleanedIdea, LlmError
+from blurt.backend.llm.factory import get_llm_provider
 
 LOGGER = logging.getLogger(__name__)
 

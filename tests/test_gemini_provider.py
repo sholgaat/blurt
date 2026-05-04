@@ -5,7 +5,7 @@ import types as pytypes
 
 import pytest
 
-from backend.llm.base import CleanedIdea, LlmError
+from blurt.backend.llm.base import CleanedIdea, LlmError
 
 
 class FakeGeminiAioModels:
@@ -41,7 +41,7 @@ def _response(text: str | None, parsed=None):
 
 
 def test_gemini_cleanup_returns_normalized_idea():
-    from backend.llm.providers.gemini import GeminiLlmProvider
+    from blurt.backend.llm.providers.gemini import GeminiLlmProvider
 
     provider = GeminiLlmProvider(
         client=FakeGeminiClient(
@@ -73,10 +73,10 @@ def test_gemini_cleanup_returns_normalized_idea():
 
 
 def test_gemini_cleanup_requires_api_key(monkeypatch):
-    from backend.llm.providers.gemini import GeminiLlmProvider
+    from blurt.backend.llm.providers.gemini import GeminiLlmProvider
 
     monkeypatch.setattr(
-        "backend.llm.providers.gemini.get_backend_settings",
+        "blurt.backend.llm.providers.gemini.get_backend_settings",
         lambda: type("Cfg", (), {"gemini_api_key": ""})(),
     )
 
@@ -85,7 +85,7 @@ def test_gemini_cleanup_requires_api_key(monkeypatch):
 
 
 def test_gemini_cleanup_rejects_empty_response():
-    from backend.llm.providers.gemini import GeminiLlmProvider
+    from blurt.backend.llm.providers.gemini import GeminiLlmProvider
 
     provider = GeminiLlmProvider(client=FakeGeminiClient(response=_response("   ")))
 
@@ -94,7 +94,7 @@ def test_gemini_cleanup_rejects_empty_response():
 
 
 def test_gemini_cleanup_rejects_invalid_json():
-    from backend.llm.providers.gemini import GeminiLlmProvider
+    from blurt.backend.llm.providers.gemini import GeminiLlmProvider
 
     provider = GeminiLlmProvider(client=FakeGeminiClient(response=_response("not json")))
 
@@ -103,7 +103,7 @@ def test_gemini_cleanup_rejects_invalid_json():
 
 
 def test_gemini_cleanup_rejects_invalid_schema():
-    from backend.llm.providers.gemini import GeminiLlmProvider
+    from blurt.backend.llm.providers.gemini import GeminiLlmProvider
 
     provider = GeminiLlmProvider(
         client=FakeGeminiClient(
@@ -116,7 +116,7 @@ def test_gemini_cleanup_rejects_invalid_schema():
 
 
 def test_factory_selects_gemini_provider(monkeypatch):
-    import backend.llm.factory as factory_module
+    import blurt.backend.llm.factory as factory_module
 
     class FakeProvider:
         provider_key = "gemini"

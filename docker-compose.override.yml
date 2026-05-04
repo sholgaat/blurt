@@ -4,14 +4,14 @@ services:
   backend:
     build:
       context: .
-      dockerfile: backend/Dockerfile
+      dockerfile: src/blurt/backend/Dockerfile
 
   bot-discord:
     build:
       context: .
-      dockerfile: bot/Dockerfile
+      dockerfile: src/blurt/bot/Dockerfile
 
   bot-telegram:
     build:
       context: .
-      dockerfile: bot/Dockerfile
+      dockerfile: src/blurt/bot/Dockerfile

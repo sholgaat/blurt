@@ -3,12 +3,12 @@ from types import SimpleNamespace
 
 import pytest
 
-from bot.connector.telegram_connector import TelegramConnector
-from bot.backend_client import BackendConnectionError, BackendResponseError
-from bot.connector.bot_connector import MessageEnvelope
-from bot.idea_handler import IdeaHandler
-from bot.idea_service import MAX_IDEA_LENGTH
-from tests.conftest import FakeBackend
+from blurt.bot.connector.telegram_connector import TelegramConnector
+from blurt.bot.backend_client import BackendConnectionError, BackendResponseError
+from blurt.bot.connector.bot_connector import MessageEnvelope
+from blurt.bot.idea_handler import IdeaHandler
+from blurt.bot.idea_service import MAX_IDEA_LENGTH
+from conftest import FakeBackend
 
 
 class DummyConversation:

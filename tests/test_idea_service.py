@@ -1,12 +1,12 @@
 import pytest
 
-from bot.backend_client import (
+from blurt.bot.backend_client import (
     BackendConnectionError,
     BackendResponseError,
     BackendTimeoutError,
 )
-from bot.idea_service import summarise_idea
-from tests.conftest import FakeBackend
+from blurt.bot.idea_service import summarise_idea
+from conftest import FakeBackend
 
 
 @pytest.mark.asyncio

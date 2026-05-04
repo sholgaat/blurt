@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 import discord
 import pytest
 
-from bot.connector.discord_connector import DiscordConnector
+from blurt.bot.connector.discord_connector import DiscordConnector
 
 
 _ALLOWED_USER_ID = 111

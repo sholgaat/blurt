@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from bot.backend_client import (
+from blurt.bot.backend_client import (
     BackendConnectionError,
     BackendTimeoutError,
     BackendResponseError,
