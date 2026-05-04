@@ -12,7 +12,6 @@ This project uses two agents/components:
     - summary
     - tags
   - Create a GitHub issue and return {title, summary, tags, url}.
-  - Support `DRY_RUN=true` for testing without creating a real issue.
 
 ## 2. Bot Runtime (Discord + Telegram)
 - Location: bot/
