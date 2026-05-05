@@ -38,20 +38,16 @@ bash blurt-setup.sh
 
 ### Use a local LLM with Ollama
 
-Start Ollama alongside the stack:
+To use Ollama as your LLM provider:
+
+1. Start Ollama alongside the stack:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.ollama.yml up -d
 docker compose exec ollama ollama pull phi3:mini
 ```
 
-Then set these in `.env.backend`:
-
-```bash
-LLM_PROVIDER=ollama
-OLLAMA_API_BASE=http://ollama:11434
-OLLAMA_MODEL=phi3:mini
-```
+2. Run the quickstart and select Ollama as your LLM provider when prompted. It will configure the necessary environment variables.
 
 Model data is persisted in the `ollama-data` volume across restarts.
 
