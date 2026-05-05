@@ -19,14 +19,17 @@ from blurt.backend.settings import get_backend_settings
 class GeminiLlmProvider(BaseLlmProvider):
     provider_key = "gemini"
     display_name = "Gemini"
-    default_model_name = "gemini-2.5-flash-lite"
 
     def __init__(
         self,
         model_name: str | None = None,
         client: object | None = None,
     ) -> None:
-        super().__init__(model_name=model_name)
+        settings = get_backend_settings()
+        resolved_model = model_name or settings.gemini_model
+        if not resolved_model:
+            raise LlmError(f"{self.display_name} model is not configured.")
+        super().__init__(model_name=resolved_model)
         self._client = client or self._create_client()
 
     def _create_client(self) -> genai.Client:

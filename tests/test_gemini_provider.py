@@ -44,6 +44,7 @@ def test_gemini_cleanup_returns_normalized_idea():
     from blurt.backend.llm.providers.gemini import GeminiLlmProvider
 
     provider = GeminiLlmProvider(
+        model_name="gemini-2.5-flash-lite",
         client=FakeGeminiClient(
             response=_response(
                 '{"title": " Build notes ", "summary": " Short summary ", '
@@ -72,12 +73,60 @@ def test_gemini_cleanup_returns_normalized_idea():
     assert kwargs["config"].response_schema is CleanedIdea
 
 
+def test_gemini_uses_configured_model(monkeypatch):
+    from blurt.backend.llm.providers.gemini import GeminiLlmProvider
+
+    monkeypatch.setattr(
+        "blurt.backend.llm.providers.gemini.get_backend_settings",
+        lambda: type("Cfg", (), {
+            "gemini_api_key": "key",
+            "gemini_model": "custom-model-123"
+        })(),
+    )
+
+    provider = GeminiLlmProvider(client=FakeGeminiClient(response=_response("{}")))
+    assert provider.model_name == "custom-model-123"
+
+
+def test_gemini_uses_explicit_model_name_override(monkeypatch):
+    from blurt.backend.llm.providers.gemini import GeminiLlmProvider
+
+    monkeypatch.setattr(
+        "blurt.backend.llm.providers.gemini.get_backend_settings",
+        lambda: type("Cfg", (), {
+            "gemini_api_key": "key",
+            "gemini_model": "settings-model"
+        })(),
+    )
+
+    provider = GeminiLlmProvider(model_name="override-model", client=FakeGeminiClient(response=_response("{}")))
+    assert provider.model_name == "override-model"
+
+
+def test_gemini_throws_without_configured_model(monkeypatch):
+    from blurt.backend.llm.providers.gemini import GeminiLlmProvider
+
+    monkeypatch.setattr(
+        "blurt.backend.llm.providers.gemini.get_backend_settings",
+        lambda: type("Cfg", (), {
+            "gemini_api_key": "key",
+            "gemini_model": ""
+        })(),
+    )
+
+    with pytest.raises(LlmError, match="Gemini model is not configured"):
+        GeminiLlmProvider()
+
+
 def test_gemini_cleanup_requires_api_key(monkeypatch):
     from blurt.backend.llm.providers.gemini import GeminiLlmProvider
 
     monkeypatch.setattr(
         "blurt.backend.llm.providers.gemini.get_backend_settings",
-        lambda: type("Cfg", (), {"gemini_api_key": ""})(),
+        lambda: type("Cfg", (), {
+            "gemini_api_key": "",
+            "gemini_model": "gemini-2.5-flash-lite"
+        })(),
     )
 
     with pytest.raises(LlmError, match="Gemini API key is not configured"):
@@ -87,7 +136,10 @@ def test_gemini_cleanup_requires_api_key(monkeypatch):
 def test_gemini_cleanup_rejects_empty_response():
     from blurt.backend.llm.providers.gemini import GeminiLlmProvider
 
-    provider = GeminiLlmProvider(client=FakeGeminiClient(response=_response("   ")))
+    provider = GeminiLlmProvider(
+        model_name="gemini-2.5-flash-lite",
+        client=FakeGeminiClient(response=_response("   "))
+    )
 
     with pytest.raises(LlmError, match="Gemini returned an empty response"):
         asyncio.run(provider.cleanup("some raw idea"))
@@ -96,7 +148,10 @@ def test_gemini_cleanup_rejects_empty_response():
 def test_gemini_cleanup_rejects_invalid_json():
     from blurt.backend.llm.providers.gemini import GeminiLlmProvider
 
-    provider = GeminiLlmProvider(client=FakeGeminiClient(response=_response("not json")))
+    provider = GeminiLlmProvider(
+        model_name="gemini-2.5-flash-lite",
+        client=FakeGeminiClient(response=_response("not json"))
+    )
 
     with pytest.raises(LlmError, match="Gemini returned invalid structured output"):
         asyncio.run(provider.cleanup("some raw idea"))
@@ -106,6 +161,7 @@ def test_gemini_cleanup_rejects_invalid_schema():
     from blurt.backend.llm.providers.gemini import GeminiLlmProvider
 
     provider = GeminiLlmProvider(
+        model_name="gemini-2.5-flash-lite",
         client=FakeGeminiClient(
             response=_response('{"title": "   ", "summary": "y", "tags": ["dev"]}')
         )

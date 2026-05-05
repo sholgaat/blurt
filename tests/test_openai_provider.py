@@ -38,7 +38,7 @@ def test_openai_cleanup_returns_normalized_idea():
         summary="Short summary",
         tags=["Dev", "DevOps"],
     )
-    provider = OpenAILlmProvider(client=FakeOpenAIClient(response))
+    provider = OpenAILlmProvider(model_name="gpt-4o-mini", client=FakeOpenAIClient(response))
     result = asyncio.run(provider.cleanup("some raw idea"))
 
     assert result == CleanedIdea(
@@ -59,12 +59,62 @@ def test_openai_cleanup_returns_normalized_idea():
     }
 
 
+def test_openai_uses_configured_model(monkeypatch):
+    from blurt.backend.llm.providers.openai import OpenAILlmProvider
+
+    monkeypatch.setattr(
+        "blurt.backend.llm.providers.openai.get_backend_settings",
+        lambda: type("Cfg", (), {
+            "openai_api_key": "key",
+            "openai_model": "custom-model-456"
+        })(),
+    )
+
+    response = CleanedIdea(title="t", summary="s", tags=["tag"])
+    provider = OpenAILlmProvider(client=FakeOpenAIClient(response))
+    assert provider.model_name == "custom-model-456"
+
+
+def test_openai_uses_explicit_model_name_override(monkeypatch):
+    from blurt.backend.llm.providers.openai import OpenAILlmProvider
+
+    monkeypatch.setattr(
+        "blurt.backend.llm.providers.openai.get_backend_settings",
+        lambda: type("Cfg", (), {
+            "openai_api_key": "key",
+            "openai_model": "settings-model"
+        })(),
+    )
+
+    response = CleanedIdea(title="t", summary="s", tags=["tag"])
+    provider = OpenAILlmProvider(model_name="override-model", client=FakeOpenAIClient(response))
+    assert provider.model_name == "override-model"
+
+
+def test_openai_throws_without_configured_model(monkeypatch):
+    from blurt.backend.llm.providers.openai import OpenAILlmProvider
+
+    monkeypatch.setattr(
+        "blurt.backend.llm.providers.openai.get_backend_settings",
+        lambda: type("Cfg", (), {
+            "openai_api_key": "key",
+            "openai_model": ""
+        })(),
+    )
+
+    with pytest.raises(LlmError, match="OpenAI model is not configured"):
+        OpenAILlmProvider()
+
+
 def test_openai_cleanup_requires_api_key(monkeypatch):
     from blurt.backend.llm.providers.openai import OpenAILlmProvider
 
     monkeypatch.setattr(
         "blurt.backend.llm.providers.openai.get_backend_settings",
-        lambda: type("Cfg", (), {"openai_api_key": ""})(),
+        lambda: type("Cfg", (), {
+            "openai_api_key": "",
+            "openai_model": "gpt-4o-mini"
+        })(),
     )
 
     with pytest.raises(LlmError, match="OpenAI API key is not configured"):

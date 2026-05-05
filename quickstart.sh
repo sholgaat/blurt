@@ -278,10 +278,19 @@ if [[ "$SETUP_MODE" == "recommended" ]]; then
   echo "  GEMINI_API_KEY: get one free at https://aistudio.google.com/app/apikey"
   cur="$(get_env "$BACKEND_ENV" "GEMINI_API_KEY")"
   prompt_value GEMINI_API_KEY "GEMINI_API_KEY" true "$cur"
+  
+  echo
+  echo "  GEMINI_MODEL: the Gemini model to use for idea structuring."
+  cur="$(get_env "$BACKEND_ENV" "GEMINI_MODEL")"
+  prompt_value GEMINI_MODEL "GEMINI_MODEL" false "$cur"
+  
   set_env "$BACKEND_ENV" "LLM_PROVIDER" "gemini"
   set_env "$BACKEND_ENV" "GEMINI_API_KEY" "$GEMINI_API_KEY"
+  set_env "$BACKEND_ENV" "GEMINI_MODEL" "$GEMINI_MODEL"
   set_env "$BACKEND_ENV" "OPENAI_API_KEY" ""
+  set_env "$BACKEND_ENV" "OPENAI_MODEL" ""
   set_env "$BACKEND_ENV" "ANTHROPIC_API_KEY" ""
+  set_env "$BACKEND_ENV" "ANTHROPIC_MODEL" ""
 
   collect_github
   collect_discord
@@ -313,43 +322,79 @@ if [[ "$SETUP_MODE" == "custom" ]]; then
         echo "  GEMINI_API_KEY: get one free at https://aistudio.google.com/app/apikey"
         cur="$(get_env "$BACKEND_ENV" "GEMINI_API_KEY")"
         prompt_value GEMINI_API_KEY "GEMINI_API_KEY" true "$cur"
+        
+        echo
+        echo "  GEMINI_MODEL: the Gemini model to use for idea structuring."
+        cur="$(get_env "$BACKEND_ENV" "GEMINI_MODEL")"
+        prompt_value GEMINI_MODEL "GEMINI_MODEL" false "$cur"
+        
         set_env "$BACKEND_ENV" "LLM_PROVIDER" "gemini"
         set_env "$BACKEND_ENV" "GEMINI_API_KEY" "$GEMINI_API_KEY"
+        set_env "$BACKEND_ENV" "GEMINI_MODEL" "$GEMINI_MODEL"
         set_env "$BACKEND_ENV" "OPENAI_API_KEY" ""
+        set_env "$BACKEND_ENV" "OPENAI_MODEL" ""
         set_env "$BACKEND_ENV" "ANTHROPIC_API_KEY" ""
+        set_env "$BACKEND_ENV" "ANTHROPIC_MODEL" ""
         break
         ;;
       2)
         echo
         cur="$(get_env "$BACKEND_ENV" "OPENAI_API_KEY")"
         prompt_value OPENAI_API_KEY "OPENAI_API_KEY" true "$cur"
+        
+        echo
+        echo "  OPENAI_MODEL: the OpenAI model to use for idea structuring."
+        cur="$(get_env "$BACKEND_ENV" "OPENAI_MODEL")"
+        prompt_value OPENAI_MODEL "OPENAI_MODEL" false "$cur"
+        
         set_env "$BACKEND_ENV" "LLM_PROVIDER" "openai"
         set_env "$BACKEND_ENV" "OPENAI_API_KEY" "$OPENAI_API_KEY"
+        set_env "$BACKEND_ENV" "OPENAI_MODEL" "$OPENAI_MODEL"
         set_env "$BACKEND_ENV" "GEMINI_API_KEY" ""
+        set_env "$BACKEND_ENV" "GEMINI_MODEL" ""
         set_env "$BACKEND_ENV" "ANTHROPIC_API_KEY" ""
+        set_env "$BACKEND_ENV" "ANTHROPIC_MODEL" ""
         break
         ;;
       3)
         echo
         cur="$(get_env "$BACKEND_ENV" "ANTHROPIC_API_KEY")"
         prompt_value ANTHROPIC_API_KEY "ANTHROPIC_API_KEY" true "$cur"
+        
+        echo
+        echo "  ANTHROPIC_MODEL: the Anthropic model to use for idea structuring."
+        cur="$(get_env "$BACKEND_ENV" "ANTHROPIC_MODEL")"
+        prompt_value ANTHROPIC_MODEL "ANTHROPIC_MODEL" false "$cur"
+        
         set_env "$BACKEND_ENV" "LLM_PROVIDER" "anthropic"
         set_env "$BACKEND_ENV" "ANTHROPIC_API_KEY" "$ANTHROPIC_API_KEY"
+        set_env "$BACKEND_ENV" "ANTHROPIC_MODEL" "$ANTHROPIC_MODEL"
         set_env "$BACKEND_ENV" "GEMINI_API_KEY" ""
+        set_env "$BACKEND_ENV" "GEMINI_MODEL" ""
         set_env "$BACKEND_ENV" "OPENAI_API_KEY" ""
+        set_env "$BACKEND_ENV" "OPENAI_MODEL" ""
         break
         ;;
       4)
         cur="$(get_env "$BACKEND_ENV" "OLLAMA_API_BASE")"
         prompt_optional OLLAMA_API_BASE "OLLAMA_API_BASE (default: http://localhost:11434)"
-        set_env "$BACKEND_ENV" "LLM_PROVIDER" "ollama"
-        set_env "$BACKEND_ENV" "GEMINI_API_KEY" ""
-        set_env "$BACKEND_ENV" "OPENAI_API_KEY" ""
-        set_env "$BACKEND_ENV" "ANTHROPIC_API_KEY" ""
         if [[ -n "$OLLAMA_API_BASE" ]]; then
           set_env "$BACKEND_ENV" "OLLAMA_API_BASE" "$OLLAMA_API_BASE"
         fi
-        set_env "$BACKEND_ENV" "OLLAMA_MODEL" "llama3.2"
+        
+        echo
+        echo "  OLLAMA_MODEL: the Ollama model to use for idea structuring."
+        cur="$(get_env "$BACKEND_ENV" "OLLAMA_MODEL")"
+        prompt_value OLLAMA_MODEL "OLLAMA_MODEL" false "$cur"
+        
+        set_env "$BACKEND_ENV" "LLM_PROVIDER" "ollama"
+        set_env "$BACKEND_ENV" "OLLAMA_MODEL" "$OLLAMA_MODEL"
+        set_env "$BACKEND_ENV" "GEMINI_API_KEY" ""
+        set_env "$BACKEND_ENV" "GEMINI_MODEL" ""
+        set_env "$BACKEND_ENV" "OPENAI_API_KEY" ""
+        set_env "$BACKEND_ENV" "OPENAI_MODEL" ""
+        set_env "$BACKEND_ENV" "ANTHROPIC_API_KEY" ""
+        set_env "$BACKEND_ENV" "ANTHROPIC_MODEL" ""
         break
         ;;
       *)

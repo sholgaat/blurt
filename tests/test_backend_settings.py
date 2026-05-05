@@ -53,3 +53,14 @@ def test_validate_github_config_whitespace_only_treated_as_empty():
     )
     # Should not raise — both are treated as empty after stripping
     validate_github_config(settings)
+
+
+def test_backend_settings_has_model_fields():
+    """Should have model configuration fields for all providers."""
+    settings = BackendSettings()
+    
+    # Verify fields exist but are empty (config-driven, no defaults)
+    assert settings.gemini_model == ""
+    assert settings.openai_model == ""
+    assert settings.anthropic_model == ""
+    assert settings.ollama_model == ""

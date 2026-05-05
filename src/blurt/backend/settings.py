@@ -16,10 +16,13 @@ class BackendSettings(BaseSettings):
     github_repo: str = ""
     llm_provider: str = "gemini"
     gemini_api_key: str = ""
+    gemini_model: str = ""
     openai_api_key: str = ""
+    openai_model: str = ""
     anthropic_api_key: str = ""
+    anthropic_model: str = ""
     ollama_api_base: str = "http://localhost:11434"
-    ollama_model: str = "llama3.2"
+    ollama_model: str = ""
     model_timeout_seconds: int = 30
 
 

@@ -41,7 +41,7 @@ def test_ollama_cleanup_returns_normalized_idea():
         "prompt_eval_count": 11,
         "eval_count": 7,
     }
-    provider = OllamaLlmProvider(client=FakeOllamaClient(response=response))
+    provider = OllamaLlmProvider(model_name="llama3.2", client=FakeOllamaClient(response=response))
     result = asyncio.run(provider.cleanup("some raw idea"))
 
     assert result == CleanedIdea(
@@ -58,7 +58,10 @@ def test_ollama_cleanup_returns_normalized_idea():
 def test_ollama_cleanup_rejects_empty_response():
     from blurt.backend.llm.providers.ollama import OllamaLlmProvider
 
-    provider = OllamaLlmProvider(client=FakeOllamaClient(response={"response": "   "}))
+    provider = OllamaLlmProvider(
+        model_name="llama3.2",
+        client=FakeOllamaClient(response={"response": "   "})
+    )
 
     with pytest.raises(LlmError, match="Ollama returned an empty response"):
         asyncio.run(provider.cleanup("some raw idea"))
@@ -68,6 +71,7 @@ def test_ollama_cleanup_reports_model_not_found():
     from blurt.backend.llm.providers.ollama import OllamaLlmProvider
 
     provider = OllamaLlmProvider(
+        model_name="llama3.2",
         client=FakeOllamaClient(exc=FakeResponseError("not found"))
     )
     provider._response_error_cls = FakeResponseError
@@ -79,7 +83,10 @@ def test_ollama_cleanup_reports_model_not_found():
 def test_ollama_cleanup_reports_timeout():
     from blurt.backend.llm.providers.ollama import OllamaLlmProvider
 
-    provider = OllamaLlmProvider(client=FakeOllamaClient(exc=TimeoutError("timeout")))
+    provider = OllamaLlmProvider(
+        model_name="llama3.2",
+        client=FakeOllamaClient(exc=TimeoutError("timeout"))
+    )
 
     with pytest.raises(LlmError, match="timed out"):
         asyncio.run(provider.cleanup("some raw idea"))
@@ -89,6 +96,7 @@ def test_ollama_cleanup_reports_connection_error():
     from blurt.backend.llm.providers.ollama import OllamaLlmProvider
 
     provider = OllamaLlmProvider(
+        model_name="llama3.2",
         client=FakeOllamaClient(exc=ConnectionError("connection refused"))
     )
 

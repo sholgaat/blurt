@@ -34,7 +34,7 @@ def test_anthropic_cleanup_returns_normalized_idea():
         summary="Short summary",
         tags=["Dev", "DevOps"],
     )
-    provider = AnthropicLlmProvider(client=FakeAnthropicClient(response))
+    provider = AnthropicLlmProvider(model_name="claude-haiku-4-5", client=FakeAnthropicClient(response))
     result = asyncio.run(provider.cleanup("some raw idea"))
 
     assert result == CleanedIdea(
@@ -51,12 +51,62 @@ def test_anthropic_cleanup_returns_normalized_idea():
     }
 
 
+def test_anthropic_uses_configured_model(monkeypatch):
+    from blurt.backend.llm.providers.anthropic import AnthropicLlmProvider
+
+    monkeypatch.setattr(
+        "blurt.backend.llm.providers.anthropic.get_backend_settings",
+        lambda: type("Cfg", (), {
+            "anthropic_api_key": "key",
+            "anthropic_model": "custom-model-789"
+        })(),
+    )
+
+    response = CleanedIdea(title="t", summary="s", tags=["tag"])
+    provider = AnthropicLlmProvider(client=FakeAnthropicClient(response))
+    assert provider.model_name == "custom-model-789"
+
+
+def test_anthropic_uses_explicit_model_name_override(monkeypatch):
+    from blurt.backend.llm.providers.anthropic import AnthropicLlmProvider
+
+    monkeypatch.setattr(
+        "blurt.backend.llm.providers.anthropic.get_backend_settings",
+        lambda: type("Cfg", (), {
+            "anthropic_api_key": "key",
+            "anthropic_model": "settings-model"
+        })(),
+    )
+
+    response = CleanedIdea(title="t", summary="s", tags=["tag"])
+    provider = AnthropicLlmProvider(model_name="override-model", client=FakeAnthropicClient(response))
+    assert provider.model_name == "override-model"
+
+
+def test_anthropic_throws_without_configured_model(monkeypatch):
+    from blurt.backend.llm.providers.anthropic import AnthropicLlmProvider
+
+    monkeypatch.setattr(
+        "blurt.backend.llm.providers.anthropic.get_backend_settings",
+        lambda: type("Cfg", (), {
+            "anthropic_api_key": "key",
+            "anthropic_model": ""
+        })(),
+    )
+
+    with pytest.raises(LlmError, match="Anthropic model is not configured"):
+        AnthropicLlmProvider()
+
+
 def test_anthropic_cleanup_requires_api_key(monkeypatch):
     from blurt.backend.llm.providers.anthropic import AnthropicLlmProvider
 
     monkeypatch.setattr(
         "blurt.backend.llm.providers.anthropic.get_backend_settings",
-        lambda: type("Cfg", (), {"anthropic_api_key": ""})(),
+        lambda: type("Cfg", (), {
+            "anthropic_api_key": "",
+            "anthropic_model": "claude-haiku-4-5"
+        })(),
     )
 
     with pytest.raises(LlmError, match="Anthropic API key is not configured"):

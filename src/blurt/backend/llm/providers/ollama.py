@@ -13,7 +13,6 @@ from blurt.backend.settings import get_backend_settings
 class OllamaLlmProvider(BaseLlmProvider):
     provider_key = "ollama"
     display_name = "Ollama"
-    default_model_name = "llama3.2"
 
     def __init__(
         self,
@@ -21,7 +20,9 @@ class OllamaLlmProvider(BaseLlmProvider):
         client: object | None = None,
     ) -> None:
         settings = get_backend_settings()
-        resolved_model = model_name or settings.ollama_model or self.default_model_name
+        resolved_model = model_name or settings.ollama_model
+        if not resolved_model:
+            raise LlmError(f"{self.display_name} model is not configured.")
         super().__init__(model_name=resolved_model)
         self.api_base = settings.ollama_api_base
         self.timeout_seconds = settings.model_timeout_seconds

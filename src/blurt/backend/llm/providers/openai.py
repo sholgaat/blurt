@@ -10,14 +10,17 @@ from blurt.backend.settings import get_backend_settings
 class OpenAILlmProvider(BaseLlmProvider):
     provider_key = "openai"
     display_name = "OpenAI"
-    default_model_name = "gpt-4o-mini"
 
     def __init__(
         self,
         model_name: str | None = None,
         client: object | None = None,
     ) -> None:
-        super().__init__(model_name=model_name)
+        settings = get_backend_settings()
+        resolved_model = model_name or settings.openai_model
+        if not resolved_model:
+            raise LlmError(f"{self.display_name} model is not configured.")
+        super().__init__(model_name=resolved_model)
         self._client = client or self._create_client()
 
     def _create_client(self):
