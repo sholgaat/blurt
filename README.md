@@ -52,3 +52,11 @@ OLLAMA_MODEL=phi3:mini
 ```
 
 Model data is persisted in the `ollama-data` volume across restarts.
+
+### Build images from source
+
+By default, Docker pulls pre-built images. To build images locally from source instead, before running `docker compose up -d`:
+
+```bash
+mv docker-compose.override.yml.disabled docker-compose.override.yml
+```
