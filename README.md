@@ -1,6 +1,8 @@
-# blurt
+# blurt 🤖
 
-Turn shower thoughts into structured GitHub issues — just message your bot.
+Never forget a project idea again!
+
+Turn shower thoughts into structured GitHub issues with 0 friction — just message your bot.
 
 Send a rough idea to your Discord or Telegram bot and blurt turns it into a polished GitHub issue automatically.
 
