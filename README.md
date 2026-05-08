@@ -1,10 +1,10 @@
 # blurt
 
-**Message your bot. Get a polished GitHub issue back.**
+**Ramble an idea at your bot. Get a polished GitHub issue back.**
 
-Capture ideas before they disappear. blurt takes a rough message — a shower thought, a half-formed feature idea, a bug you noticed — and turns it into a structured GitHub issue, automatically.
+Capture ideas before they disappear. **_blurt_** takes a rough message — a shower thought, a half-formed feature idea, a bug you noticed — and turns it into a structured GitHub issue, automatically.
 
-No app to open. No form to fill out. Just send a message.
+No annoying forms. No more messy Notes. Just a message to your bot.
 
 ![License](https://img.shields.io/github/license/sholgaat/blurt) ![Docker](https://img.shields.io/badge/docker-compose-blue) ![Python](https://img.shields.io/badge/python-3.11+-blue)
 
@@ -38,7 +38,7 @@ No app to open. No form to fill out. Just send a message.
 ## How it works
 
 1. Send a rough idea to your Discord or Telegram bot
-2. blurt passes it to your configured LLM, which generates a title, summary, and tags
+2. **_blurt_** passes it to your configured LLM, which generates a title, summary, and tags
 3. A GitHub issue is created in your repo
 4. The bot replies with the issue title and link
 
@@ -70,33 +70,7 @@ bash blurt-setup.sh
 
 ---
 
-## Architecture
-
-```mermaid
-flowchart LR
-    U([User]) --> B[Discord / Telegram bot]
-    B --> A[Backend API]
-    A --> L[LLM provider]
-    A --> G[GitHub Issues]
-    B --> U2([Bot reply with issue URL])
-```
-
----
-
 ## Advanced
-
-### Use a local LLM with Ollama
-
-1. Start Ollama alongside the stack:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.ollama.yml up -d
-docker compose exec ollama ollama pull phi3:mini
-```
-
-2. Run the quickstart and select Ollama as your LLM provider when prompted.
-
-Model data is persisted in the `ollama-data` volume across restarts.
 
 ### Build images from source
 
@@ -105,3 +79,24 @@ By default, Docker pulls pre-built images. To build locally instead, before runn
 ```bash
 mv docker-compose.override.yml.disabled docker-compose.override.yml
 ```
+
+### Use a local LLM with Ollama
+
+Don't trust Big LLM with your ideas? No problem — bring your own.
+
+1. Download the Ollama compose file:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sholgaat/blurt/main/docker-compose.ollama.yml -o docker-compose.ollama.yml
+```
+
+2. Run the quickstart as normal — when prompted, select Ollama as your LLM provider. This will configure the necessary environment variables.
+
+3. Once setup is complete, start the Ollama service and pull a model:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.ollama.yml up -d
+docker compose exec ollama ollama pull phi3:mini
+```
+
+Model data is persisted in the `ollama-data` volume across restarts.
