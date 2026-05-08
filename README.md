@@ -1,4 +1,4 @@
-# blurt
+# blurt 🤖
 
 **Ramble an idea at your bot. Get a polished GitHub issue back.**
 
