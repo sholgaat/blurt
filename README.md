@@ -84,19 +84,17 @@ mv docker-compose.override.yml.disabled docker-compose.override.yml
 
 Don't trust Big LLM with your ideas? No problem — bring your own.
 
-1. Download the Ollama compose file:
+Run the quickstart and select Ollama as your LLM provider when prompted. You'll be asked for the Ollama base URL — you can either:
+
+- **Already have Ollama running?** Provide the URL (e.g., `http://192.168.1.100:11434`)
+- **Want to set it up with blurt?** Download the Ollama compose file and include it when running:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sholgaat/blurt/main/docker-compose.ollama.yml -o docker-compose.ollama.yml
-```
-
-2. Run the quickstart as normal — when prompted, select Ollama as your LLM provider. This will configure the necessary environment variables.
-
-3. Once setup is complete, start the Ollama service and pull a model:
-
-```bash
 docker compose -f docker-compose.yml -f docker-compose.ollama.yml up -d
 docker compose exec ollama ollama pull phi3:mini
 ```
+
+The Docker network will make Ollama accessible at `http://ollama:11434` from the backend.
 
 Model data is persisted in the `ollama-data` volume across restarts.
