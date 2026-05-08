@@ -150,16 +150,6 @@ done
 
 # ── LLM provider ──────────────────────────────────────────────────────────────
 
-ALL_LLM_KEYS=(GEMINI_API_KEY GEMINI_MODEL OPENAI_API_KEY OPENAI_MODEL ANTHROPIC_API_KEY ANTHROPIC_MODEL OLLAMA_API_BASE OLLAMA_MODEL)
-
-# Zero out every LLM key except those belonging to $1 (uppercase provider name).
-clear_other_llm_keys() {
-  local keep_prefix="${1^^}"
-  for key in "${ALL_LLM_KEYS[@]}"; do
-    [[ "$key" == "${keep_prefix}"* ]] || set_env "$BACKEND_ENV" "$key" ""
-  done
-}
-
 collect_llm() {
   local provider="$1"        # gemini | openai | anthropic | ollama
   local PREFIX="${provider^^}"
@@ -184,7 +174,6 @@ collect_llm() {
   set_env "$BACKEND_ENV" "$model_var" "${!model_var}"
 
   set_env "$BACKEND_ENV" "LLM_PROVIDER" "$provider"
-  clear_other_llm_keys "$provider"
 }
 
 info "--- LLM provider ---"
